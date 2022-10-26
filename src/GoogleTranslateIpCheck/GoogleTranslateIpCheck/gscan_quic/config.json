@@ -105,10 +105,10 @@
 		"HandshakeTimeout": 10000,
 		"ScanMinRTT": 0,
 		"ScanMaxRTT": 5000,
-		"RecordLimit": 10000,
+		"RecordLimit": 8,
 		"OutputSeparator": "\r\n",
-		"InputFile": "./iprange_gws_b.txt",
-		"OutputFile": "./out_gws_b.txt",
+		"InputFile": "./iprange_gws_a.txt",
+		"OutputFile": "./out_gws_a.txt",
 		// 1: 测试 tls 连接并握手成功
 		// 2: 证书验证: VerifyCommonName
 		// 3: http 测试: StatusCode

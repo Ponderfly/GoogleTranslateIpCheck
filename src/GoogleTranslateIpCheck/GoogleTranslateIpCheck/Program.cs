@@ -71,9 +71,8 @@ async Task ScanIpAsync()
 {
     var stdOutBuffer = new StringBuilder();
     var stdErrBuffer = new StringBuilder();
-    //System.IO.Directory.SetCurrentDirectory(@"D:\vs\Project\gscan_quic");
     var cmd = Cli.Wrap("gscan_quic.exe")
-    .WithWorkingDirectory(@"D:\vs\Project\gscan_quic")
+    .WithWorkingDirectory(@"gscan_quic")
     .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
     .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer));
 

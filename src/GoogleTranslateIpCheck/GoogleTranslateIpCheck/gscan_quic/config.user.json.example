@@ -1,0 +1,59 @@
+{
+	"ScanWorker": 100,
+	"VerifyPing": false,
+	"ScanMinPingRTT": 80,
+	"ScanMaxPingRTT": 800,	
+	
+	"ScanMode":   "quic",
+	
+	"Ping": {
+		//"ScanCountPerIP":  1,
+		//"ScanMinRTT":      0,
+		//"ScanMaxRTT":      1000,
+		//"RecordLimit":     10000,
+		//"OutputSeparator": "\r\n",
+		//"InputFile":       "./iprange_ping.txt",
+		//"OutputFile":      "./out_ping.txt"
+	},
+
+	"QUIC": {
+		//"ScanCountPerIP":   1,
+		//"ServerName":       [],
+		//"HTTPVerifyHosts":  ["dns.google.com"],
+		//"HandshakeTimeout": 2500,
+		//"ScanMinRTT":       0,
+		//"ScanMaxRTT":       3000,
+		//"RecordLimit":      10000,
+		//"OutputSeparator":  "gop",
+		//"InputFile": "./iprange_quic.txt",
+		//"OutputFile": "./out_quic.txt",
+		//"Level": 3
+	},
+
+	"TLS": {
+		//"ScanCountPerIP":   1,
+		//"ServerName":       [],
+		//"HTTPVerifyHosts":  ["dns.google.com"],
+		//"HandshakeTimeout": 2500,
+		//"ScanMinRTT":       0,
+		//"ScanMaxRTT":       3000,
+		//"RecordLimit":      10000,
+		//"OutputSeparator":  "|",
+		//"InputFile":        "./iprange_tls.txt",
+		//"OutputFile":       "./out_tls.txt",
+		//"Level": 3
+	},
+
+	"SNI": {
+		//"ScanCountPerIP": 1,
+		//"ServerName": ["www.bing.com", "duckduckgo.com"],
+		//"HandshakeTimeout": 2500,
+		//"ScanMinRTT":       0,
+		//"ScanMaxRTT":       3000,
+		//"RecordLimit":      10000,
+		//"OutputSeparator":  "\r\n",
+		//"InputFile":        "./iprange_sni.txt",
+		//"OutputFile":       "./out_sni.txt",
+		//"Level": 2
+	}
+}

@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 
-//var ip = "142.250.101.90";
 var ips = ReadIp();
 if (ips == null || ips?.Count == 0)
 {

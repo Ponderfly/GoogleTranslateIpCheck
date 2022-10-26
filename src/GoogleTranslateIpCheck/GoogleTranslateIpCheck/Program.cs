@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 
+const string host = "translate.googleapis.com";
 var ips = ReadIp();
 if (ips == null || ips?.Count == 0)
 {
@@ -23,6 +24,8 @@ foreach (var ip in ips!)
 }
 var bestIp = times.MinBy(x => x.Value).Key;
 Console.WriteLine($"最佳IP为: {bestIp} 响应时间 {times.MinBy(x => x.Value).Value} ms");
+Console.WriteLine("设置Host文件需要管理员权限,可能会被安全软件拦截,建议手工复制以下文本到Host文件");
+Console.WriteLine($"{host} {bestIp}");
 Console.WriteLine("是否设置到Host文件(Y:设置)");
 if (Console.ReadKey().Key != ConsoleKey.Y)
     return;
@@ -145,7 +148,7 @@ void SetHostFile()
     var hostFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.System),
             @"drivers\etc\hosts");
-    var host = "translate.googleapis.com";
+
     var ip = $"{bestIp} {host}";
     File.SetAttributes(hostFile, FileAttributes.Normal);
     var lines = File.ReadAllLines(hostFile);

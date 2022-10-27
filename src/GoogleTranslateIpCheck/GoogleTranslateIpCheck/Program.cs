@@ -28,7 +28,7 @@ foreach (var ip in ips!)
 }
 if (times.Count == 0)
 {
-    Console.WriteLine("未找到可用IP,可删除 ip.txt 文件直接进入扫描模式");
+    Console.WriteLine("未找到可用IP");
     return;
 }
 var bestIp = times.MinBy(x => x.Value).Key;
@@ -202,9 +202,7 @@ void SetHostFile()
     //    hostFile = "/etc/hosts";
     //else
     //    throw new Exception("暂不支持");
-    var hostFile = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.System),
-            @"drivers\etc\hosts");
+    var hostFile = "/etc/hosts";
 
     var ip = $"{bestIp} {host}";
     File.SetAttributes(hostFile, FileAttributes.Normal);

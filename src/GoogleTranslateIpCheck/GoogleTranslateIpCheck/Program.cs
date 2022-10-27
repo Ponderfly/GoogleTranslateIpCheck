@@ -9,25 +9,18 @@ const string host = "translate.googleapis.com";
 const string remoteIp = @"https://raw.githubusercontent.com/hcfyapp/google-translate-cn-ip/main/ips.txt";
 
 List<string>? ips = null;
-if (args.Length > 0)
-{
-    if ("-s".Equals(args[0], StringComparison.OrdinalIgnoreCase))
-    {
-        ips = await ScanIpAsync();
-    }
-}
+//if (args.Length > 0)
+//{
+//    if ("-s".Equals(args[0], StringComparison.OrdinalIgnoreCase))
+//    {
+//        ips = await ScanIpAsync();
+//    }
+//}
 ips ??= await ReadIpAsync();
-if (ips is null || ips?.Count == 0)
-{
-    ips = await ScanIpAsync();
-    //Console.WriteLine("ip.txt 格式为每行一条IP");
-    //Console.WriteLine("172.253.114.90");
-    //Console.WriteLine("172.253.113.90");
-    //Console.WriteLine("或者为 , 分割");
-    //Console.WriteLine("172.253.114.90,172.253.113.90");
-    //Console.ReadKey();
-    //return;
-}
+//if (ips is null || ips?.Count == 0)
+//{
+//    ips = await ScanIpAsync();
+//}
 Dictionary<string, long> times = new();
 foreach (var ip in ips!)
 {

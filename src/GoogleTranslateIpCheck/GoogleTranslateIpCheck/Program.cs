@@ -6,8 +6,19 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 const string host = "translate.googleapis.com";
-var ips = ReadIp();
-if (ips == null || ips?.Count == 0)
+const string remoteIp = @"https://raw.githubusercontent.com/hcfyapp/google-translate-cn-ip/main/ips.txt";
+
+List<string>? ips = null;
+if (args.Length > 0)
+{
+    if ("-s".Equals(args[0], StringComparison.OrdinalIgnoreCase))
+    {
+        ips = await ScanIpAsync();
+    }
+}
+if (ips is not null)
+    ips = await ReadIpAsync();
+if (ips is null || ips?.Count == 0)
 {
     Console.WriteLine("ip.txt 格式为每行一条IP");
     Console.WriteLine("172.253.114.90");
@@ -69,16 +80,22 @@ void TestIp(string ip)
     }
 }
 
-async Task ScanIpAsync()
+async Task<List<string>?> ScanIpAsync()
 {
     var stdOutBuffer = new StringBuilder();
     var stdErrBuffer = new StringBuilder();
     var path = Path.Combine(Environment.CurrentDirectory, "gscan_quic");
-    var cmd = Cli.Wrap(Path.Combine(path, "gscan_quic.exe"))
+    var exe = Path.Combine(path, "gscan_quic.exe");
+    if (!File.Exists(exe))
+    {
+        Console.WriteLine("未找到扫描程序");
+        return null;
+    }
+    var cmd = Cli.Wrap(exe)
     .WithWorkingDirectory(path)
     .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
     .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer));
-
+    var listIp = new List<string>();
     await foreach (var cmdEvent in cmd.ListenAsync())
     {
         switch (cmdEvent)
@@ -90,6 +107,18 @@ async Task ScanIpAsync()
                 Console.WriteLine($"Out> {stdOut.Text}");
                 break;
             case StandardErrorCommandEvent stdErr:
+                if (stdErr.Text.Contains("Found a record"))
+                {
+                    try
+                    {
+                        var start = stdErr.Text.IndexOf("IP=") + 3;
+                        var end = stdErr.Text.IndexOf(", RTT");
+                        var ip = stdErr.Text.Substring(start, end - start).Trim();
+                        if (JudgeIPFormat(ip))
+                            listIp.Add(ip);
+                    }
+                    catch { }
+                }
                 Console.WriteLine($"Err> {stdErr.Text}");
                 break;
             case ExitedCommandEvent exited:
@@ -99,20 +128,32 @@ async Task ScanIpAsync()
     }
     var result = await cmd.ExecuteAsync();
     var exitCode = result.ExitCode;
-
+    return listIp;
 }
 
 
-List<string>? ReadIp()
+async Task<List<string>?> ReadIpAsync()
 {
+    string[]? lines;
     if (!File.Exists("ip.txt"))
     {
         Console.WriteLine("未能找到IP文件");
-        return null;
+        Console.WriteLine("尝试从服务器获取IP");
+        lines = await ReadRemoteIpAsync();
+        if (lines is null)
+            return null;
     }
-    var lines = File.ReadAllLines("ip.txt");
-    if (lines.Length < 0) return null;
-    var ips = new List<string>();
+    else
+    {
+        lines = File.ReadAllLines("ip.txt");
+        if (lines.Length < 1)
+        {
+            lines = await ReadRemoteIpAsync();
+            if (lines is null)
+                return null;
+        }
+    }
+    var listIp = new List<string>();
     foreach (var line in lines)
     {
         if (string.IsNullOrWhiteSpace(line))
@@ -122,16 +163,32 @@ List<string>? ReadIp()
             foreach (var ip in line.Split(','))
             {
                 if (JudgeIPFormat(ip.Trim()))
-                    ips.Add(ip.Trim());
+                    listIp.Add(ip.Trim());
             }
         }
         else
         {
             if (JudgeIPFormat(line.Trim()))
-                ips.Add(line.Trim());
+                listIp.Add(line.Trim());
         }
     }
-    return ips;
+    Console.WriteLine($"找到 {listIp.Count} 条IP");
+    return listIp;
+}
+
+async Task<string[]?> ReadRemoteIpAsync()
+{
+    try
+    {
+        var text = await remoteIp.WithTimeout(10).GetStringAsync();
+        return text.Trim().Split(new string[] { Environment.NewLine },
+            StringSplitOptions.RemoveEmptyEntries);
+    }
+    catch
+    {
+        Console.WriteLine("获取服务器IP失败");
+        return null;
+    }
 }
 
 void SetHostFile()
@@ -154,7 +211,7 @@ void SetHostFile()
     var lines = File.ReadAllLines(hostFile);
     if (lines.Any(s => s.Contains("translate.googleapis.com")))
     {
-        for (int i = 0; i < lines.Length; i++)
+        for (var i = 0; i < lines.Length; i++)
         {
             if (lines[i].Contains("translate.googleapis.com"))
                 lines[i] = ip;
@@ -170,18 +227,18 @@ void SetHostFile()
 
 bool JudgeIPFormat(string strJudgeString)
 {
-    bool blnTest = false;
-    bool _Result = true;
+    var blnTest = false;
+    var _Result = true;
 
-    Regex regex = new Regex("^[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}$");
+    var regex = new Regex("^[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}$");
     blnTest = regex.IsMatch(strJudgeString);
     if (blnTest == true)
     {
-        string[] strTemp = strJudgeString.Split(new char[] { '.' });
-        int nDotCount = strTemp.Length - 1;
+        var strTemp = strJudgeString.Split(new char[] { '.' });
+        var nDotCount = strTemp.Length - 1;
         if (3 == nDotCount)
         {
-            for (int i = 0; i < strTemp.Length; i++)
+            for (var i = 0; i < strTemp.Length; i++)
             {
                 if (Convert.ToInt32(strTemp[i]) > 255)
                 {

@@ -16,25 +16,31 @@ if (args.Length > 0)
         ips = await ScanIpAsync();
     }
 }
-if (ips is not null)
-    ips = await ReadIpAsync();
+ips ??= await ReadIpAsync();
 if (ips is null || ips?.Count == 0)
 {
-    Console.WriteLine("ip.txt 格式为每行一条IP");
-    Console.WriteLine("172.253.114.90");
-    Console.WriteLine("172.253.113.90");
-    Console.WriteLine("或者为 , 分割");
-    Console.WriteLine("172.253.114.90,172.253.113.90");
-    Console.ReadKey();
-    return;
+    ips = await ScanIpAsync();
+    //Console.WriteLine("ip.txt 格式为每行一条IP");
+    //Console.WriteLine("172.253.114.90");
+    //Console.WriteLine("172.253.113.90");
+    //Console.WriteLine("或者为 , 分割");
+    //Console.WriteLine("172.253.114.90,172.253.113.90");
+    //Console.ReadKey();
+    //return;
 }
 Dictionary<string, long> times = new();
 foreach (var ip in ips!)
 {
     TestIp(ip);
 }
+if (times.Count == 0)
+{
+    Console.WriteLine("未找到可用IP,可删除 ip.txt 文件直接进入扫描模式");
+    return;
+}
 var bestIp = times.MinBy(x => x.Value).Key;
 Console.WriteLine($"最佳IP为: {bestIp} 响应时间 {times.MinBy(x => x.Value).Value} ms");
+SaveIpFile();
 Console.WriteLine("设置Host文件需要管理员权限,可能会被安全软件拦截,建议手工复制以下文本到Host文件");
 Console.WriteLine($"{host} {bestIp}");
 Console.WriteLine("是否设置到Host文件(Y:设置)");
@@ -50,6 +56,7 @@ void TestIp(string ip)
 {
     try
     {
+        Console.WriteLine("开始检测IP响应时间");
         var url = $@"http://{ip}/translate_a/single?client=gtx&sl=en&tl=fr&q=a";
         Stopwatch sw = new();
         var time = 3000L;
@@ -91,6 +98,7 @@ async Task<List<string>?> ScanIpAsync()
         Console.WriteLine("未找到扫描程序");
         return null;
     }
+    Console.WriteLine("开始扫描可用IP,时间较长,请耐心等候");
     var cmd = Cli.Wrap(exe)
     .WithWorkingDirectory(path)
     .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
@@ -100,12 +108,12 @@ async Task<List<string>?> ScanIpAsync()
     {
         switch (cmdEvent)
         {
-            case StartedCommandEvent started:
-                Console.WriteLine($"Process started; ID: {started.ProcessId}");
-                break;
-            case StandardOutputCommandEvent stdOut:
-                Console.WriteLine($"Out> {stdOut.Text}");
-                break;
+            //case StartedCommandEvent started:
+            //    Console.WriteLine($"Process started; ID: {started.ProcessId}");
+            //    break;
+            //case StandardOutputCommandEvent stdOut:
+            //    Console.WriteLine($"Out> {stdOut.Text}");
+            //    break;
             case StandardErrorCommandEvent stdErr:
                 if (stdErr.Text.Contains("Found a record"))
                 {
@@ -114,20 +122,19 @@ async Task<List<string>?> ScanIpAsync()
                         var start = stdErr.Text.IndexOf("IP=") + 3;
                         var end = stdErr.Text.IndexOf(", RTT");
                         var ip = stdErr.Text.AsSpan().Slice(start, end - start).Trim().ToString();
-                        if (JudgeIPFormat(ip))
+                        if (RegexStuff.IpRegex().IsMatch(ip))
                             listIp.Add(ip);
+                        Console.WriteLine($"找到IP: {ip}");
                     }
                     catch { }
                 }
-                Console.WriteLine($"Err> {stdErr.Text}");
                 break;
             case ExitedCommandEvent exited:
-                Console.WriteLine($"Process exited; Code: {exited.ExitCode}");
+                Console.WriteLine($"扫描完成,找到 {listIp.Count} 条IP");
                 break;
         }
     }
-    var result = await cmd.ExecuteAsync();
-    var exitCode = result.ExitCode;
+    _ = await cmd.ExecuteAsync();
     return listIp;
 }
 
@@ -162,13 +169,13 @@ async Task<List<string>?> ReadIpAsync()
         {
             foreach (var ip in line.Split(','))
             {
-                if (JudgeIPFormat(ip.Trim()))
+                if (RegexStuff.IpRegex().IsMatch(ip.Trim()))
                     listIp.Add(ip.Trim());
             }
         }
         else
         {
-            if (JudgeIPFormat(line.Trim()))
+            if (RegexStuff.IpRegex().IsMatch(line.Trim()))
                 listIp.Add(line.Trim());
         }
     }
@@ -225,35 +232,13 @@ void SetHostFile()
     }
 }
 
-bool JudgeIPFormat(string strJudgeString)
+void SaveIpFile()
 {
-    var blnTest = false;
-    var _Result = true;
+    File.WriteAllLines("ip.txt", ips, Encoding.UTF8);
+}
 
-    var regex = new Regex("^[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}$");
-    blnTest = regex.IsMatch(strJudgeString);
-    if (blnTest == true)
-    {
-        var strTemp = strJudgeString.Split(new char[] { '.' });
-        var nDotCount = strTemp.Length - 1;
-        if (3 == nDotCount)
-        {
-            for (var i = 0; i < strTemp.Length; i++)
-            {
-                if (Convert.ToInt32(strTemp[i]) > 255)
-                {
-                    _Result = false;
-                }
-            }
-        }
-        else
-        {
-            _Result = false;
-        }
-    }
-    else
-    {
-        _Result = false;
-    }
-    return _Result;
+public partial class RegexStuff
+{
+    [GeneratedRegex(@"^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")]
+    public static partial Regex IpRegex();
 }

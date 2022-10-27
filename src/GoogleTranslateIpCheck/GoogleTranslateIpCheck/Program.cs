@@ -113,7 +113,7 @@ async Task<List<string>?> ScanIpAsync()
                     {
                         var start = stdErr.Text.IndexOf("IP=") + 3;
                         var end = stdErr.Text.IndexOf(", RTT");
-                        var ip = stdErr.Text.Substring(start, end - start).Trim();
+                        var ip = stdErr.Text.AsSpan().Slice(start, end - start).Trim().ToString();
                         if (JudgeIPFormat(ip))
                             listIp.Add(ip);
                     }

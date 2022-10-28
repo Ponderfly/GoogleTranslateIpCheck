@@ -31,7 +31,7 @@ if (ips is null || ips?.Count == 0)
 Dictionary<string, long> times = new();
 foreach (var ip in ips!)
 {
-    TestIp(ip);
+    await TestIp(ip);
 }
 if (times.Count == 0)
 {
@@ -52,7 +52,7 @@ catch (Exception ex) { Console.WriteLine($"设置失败:{ex.Message}"); }
 Console.WriteLine("设置成功");
 Console.ReadKey();
 
-void TestIp(string ip)
+async Task TestIp(string ip)
 {
     try
     {
@@ -63,7 +63,7 @@ void TestIp(string ip)
         for (int i = 0; i < 3; i++)
         {
             sw.Start();
-            var r = url
+            var r = await url
             .WithHeader("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
             .WithHeader("accept-encoding", "gzip, deflate, br")
             .WithHeader("accept-language", "zh-CN,zh;q=0.9")
@@ -71,7 +71,7 @@ void TestIp(string ip)
             .WithHeader("host", "translate.googleapis.com")
             .WithHeader("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36")
             .WithTimeout(3)
-            .GetStringAsync().GetAwaiter().GetResult();
+            .GetStringAsync();
             sw.Stop();
             if (sw.ElapsedMilliseconds < time)
                 time = sw.ElapsedMilliseconds;

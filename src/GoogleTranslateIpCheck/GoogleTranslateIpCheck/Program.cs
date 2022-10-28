@@ -29,6 +29,7 @@ if (ips is null || ips?.Count == 0)
     //return;
 }
 Dictionary<string, long> times = new();
+Console.WriteLine("开始检测IP响应时间");
 foreach (var ip in ips!)
 {
     await TestIp(ip);
@@ -56,7 +57,6 @@ async Task TestIp(string ip)
 {
     try
     {
-        Console.WriteLine("开始检测IP响应时间");
         var url = $@"http://{ip}/translate_a/single?client=gtx&sl=en&tl=fr&q=a";
         Stopwatch sw = new();
         var time = 3000L;

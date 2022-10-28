@@ -32,7 +32,7 @@ Dictionary<string, long> times = new();
 Console.WriteLine("开始检测IP响应时间");
 foreach (var ip in ips!)
 {
-    await TestIp(ip);
+    await TestIpAsync(ip);
 }
 if (times.Count == 0)
 {
@@ -41,19 +41,19 @@ if (times.Count == 0)
 }
 var bestIp = times.MinBy(x => x.Value).Key;
 Console.WriteLine($"最佳IP为: {bestIp} 响应时间 {times.MinBy(x => x.Value).Value} ms");
-SaveIpFile();
+await SaveIpFileAsync();
 Console.WriteLine("设置Host文件需要管理员权限,可能会被安全软件拦截,建议手工复制以下文本到Host文件");
 Console.WriteLine($"{host} {bestIp}");
 Console.WriteLine("是否设置到Host文件(Y:设置)");
 if (Console.ReadKey().Key != ConsoleKey.Y)
     return;
 Console.WriteLine();
-try { SetHostFile(); }
+try { await SetHostFileAsync(); }
 catch (Exception ex) { Console.WriteLine($"设置失败:{ex.Message}"); }
 Console.WriteLine("设置成功");
 Console.ReadKey();
 
-async Task TestIp(string ip)
+async Task TestIpAsync(string ip)
 {
     try
     {
@@ -198,7 +198,7 @@ async Task<string[]?> ReadRemoteIpAsync()
     }
 }
 
-void SetHostFile()
+async Task SetHostFileAsync()
 {
     //string hostFile = string.Empty;
     //if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
@@ -215,7 +215,7 @@ void SetHostFile()
 
     var ip = $"{bestIp} {host}";
     File.SetAttributes(hostFile, FileAttributes.Normal);
-    var lines = File.ReadAllLines(hostFile);
+    var lines = await File.ReadAllLinesAsync(hostFile);
     if (lines.Any(s => s.Contains("translate.googleapis.com")))
     {
         for (var i = 0; i < lines.Length; i++)
@@ -223,18 +223,18 @@ void SetHostFile()
             if (lines[i].Contains("translate.googleapis.com"))
                 lines[i] = ip;
         }
-        File.WriteAllLines(hostFile, lines);
+        await File.WriteAllLinesAsync(hostFile, lines);
     }
     else if (!lines.Contains(ip))
     {
-        File.AppendAllLines(hostFile, new String[] { Environment.NewLine });
-        File.AppendAllLines(hostFile, new String[] { ip });
+        await File.AppendAllLinesAsync(hostFile, new String[] { Environment.NewLine });
+        await File.AppendAllLinesAsync(hostFile, new String[] { ip });
     }
 }
 
-void SaveIpFile()
+async Task SaveIpFileAsync()
 {
-    File.WriteAllLines("ip.txt", ips, Encoding.UTF8);
+    await File.WriteAllLinesAsync("ip.txt", ips, Encoding.UTF8);
 }
 
 public partial class RegexStuff

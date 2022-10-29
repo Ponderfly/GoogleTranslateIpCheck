@@ -1,14 +1,28 @@
-﻿using CliWrap;
-using CliWrap.EventStream;
-using Flurl.Http;
+﻿using Flurl.Http;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Channels;
 
 const string host = "translate.googleapis.com";
 const string remoteIp = @"https://raw.githubusercontent.com/hcfyapp/google-translate-cn-ip/main/ips.txt";
+const int ipLimit = 5;
+const int timeout = 4;
+const int maxDegreeOfParallelism = 80;
+var ipRanges =
+    """"
+	142.250.0.0/15
+	172.217.0.0/16
+	172.253.0.0/16
+	108.177.0.0/17
+	72.14.192.0/18
+	74.125.0.0/16
+	216.58.192.0/19
+	"""".Split(Environment.NewLine);
 
-List<string>? ips = null;
+HashSet<string>? ips = null;
 if (args.Length > 0)
 {
     if ("-s".Equals(args[0], StringComparison.OrdinalIgnoreCase))
@@ -87,59 +101,56 @@ async Task TestIpAsync(string ip)
     }
 }
 
-async Task<List<string>?> ScanIpAsync()
+async Task<HashSet<string>?> ScanIpAsync()
 {
-    var stdOutBuffer = new StringBuilder();
-    var stdErrBuffer = new StringBuilder();
-    var path = Path.Combine(Environment.CurrentDirectory, "gscan_quic");
-    var exe = Path.Combine(path, "gscan_quic.exe");
-    if (!File.Exists(exe))
-    {
-        Console.WriteLine("未找到扫描程序");
-        return null;
-    }
     Console.WriteLine("开始扫描可用IP,时间较长,请耐心等候");
-    var cmd = Cli.Wrap(exe)
-    .WithWorkingDirectory(path)
-    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
-    .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer));
-    var listIp = new List<string>();
-    await foreach (var cmdEvent in cmd.ListenAsync())
+    var listIp = new HashSet<string>();
+    CancellationTokenSource cts = new();
+    cts.Token.Register(() => { Console.WriteLine($"已经找到 {ipLimit} 条IP,结束扫描"); });
+    foreach (var ipRange in ipRanges)
     {
-        switch (cmdEvent)
+        IPNetwork ipnetwork = IPNetwork.Parse(ipRange);
+        var _ips = new ConcurrentBag<string>();
+        //Console.WriteLine(ipRange);
+        try
         {
-            //case StartedCommandEvent started:
-            //    Console.WriteLine($"Process started; ID: {started.ProcessId}");
-            //    break;
-            //case StandardOutputCommandEvent stdOut:
-            //    Console.WriteLine($"Out> {stdOut.Text}");
-            //    break;
-            case StandardErrorCommandEvent stdErr:
-                if (stdErr.Text.Contains("Found a record"))
-                {
-                    try
+            await 
+                Parallel.ForEachAsync(
+                ipnetwork.ListIPAddress(FilterEnum.Usable),
+                new ParallelOptions() { 
+                    MaxDegreeOfParallelism = maxDegreeOfParallelism, 
+                    CancellationToken = cts.Token },
+                    async (ip, ct) =>
                     {
-                        var start = stdErr.Text.IndexOf("IP=") + 3;
-                        var end = stdErr.Text.IndexOf(", RTT");
-                        var ip = stdErr.Text.AsSpan().Slice(start, end - start).Trim().ToString();
-                        if (RegexStuff.IpRegex().IsMatch(ip))
-                            listIp.Add(ip);
-                        Console.WriteLine($"找到IP: {ip}");
-                    }
-                    catch { }
-                }
-                break;
-            case ExitedCommandEvent exited:
-                Console.WriteLine($"扫描完成,找到 {listIp.Count} 条IP");
-                break;
+                        try
+                        {
+                            _ = await $"https://{ip}/"
+                            .WithTimeout(timeout)
+                            .WithHeader("host", "about.google")
+                            .GetStringAsync();
+                            Console.WriteLine($"找到IP: {ip}");
+                            _ips.Add(ip.ToString());
+                            if (listIp.Count + _ips.Count >= ipLimit)
+                                cts.Cancel();
+                        }
+                        catch { }
+                    });
+        }
+        catch { break; }
+        finally
+        {
+            foreach (var ip in _ips)
+            {
+                listIp.Add(ip.ToString());
+            }
         }
     }
-    _ = await cmd.ExecuteAsync();
+    Console.WriteLine($"扫描完成,找到 {listIp.Count} 条IP");
     return listIp;
 }
 
 
-async Task<List<string>?> ReadIpAsync()
+async Task<HashSet<string>?> ReadIpAsync()
 {
     string[]? lines;
     if (!File.Exists("ip.txt"))
@@ -160,7 +171,7 @@ async Task<List<string>?> ReadIpAsync()
                 return null;
         }
     }
-    var listIp = new List<string>();
+    var listIp = new HashSet<string>();
     foreach (var line in lines)
     {
         if (string.IsNullOrWhiteSpace(line))

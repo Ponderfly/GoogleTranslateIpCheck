@@ -6,11 +6,12 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<PublishAot>true</PublishAot>
+		<LangVersion>preview</LangVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="CliWrap" Version="3.5.0" />
 		<PackageReference Include="Flurl.Http" Version="4.0.0-pre2" />
+		<PackageReference Include="IPNetwork2" Version="2.6.472" />
 	</ItemGroup>
 
 	<ItemGroup>

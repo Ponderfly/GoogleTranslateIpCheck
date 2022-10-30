@@ -4,13 +4,13 @@ using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Channels;
 
-const string host = "translate.googleapis.com";
-const string remoteIp = @"https://raw.githubusercontent.com/hcfyapp/google-translate-cn-ip/main/ips.txt";
-const int ipLimit = 5;
-const int timeout = 4;
-const int maxDegreeOfParallelism = 80;
+const string Host = "translate.googleapis.com";
+const string RemoteIp = @"https://raw.githubusercontent.com/hcfyapp/google-translate-cn-ip/main/ips.txt";
+const int IpLimit = 5;
+const int Timeout = 4;
+const int MaxDegreeOfParallelism = 80;
+//const string HTTPVerifyHosts = "about.google";
 var ipRanges =
     """"
 	142.250.0.0/15
@@ -57,7 +57,7 @@ var bestIp = times.MinBy(x => x.Value).Key;
 Console.WriteLine($"最佳IP为: {bestIp} 响应时间 {times.MinBy(x => x.Value).Value} ms");
 await SaveIpFileAsync();
 Console.WriteLine("设置Host文件需要管理员权限,可能会被安全软件拦截,建议手工复制以下文本到Host文件");
-Console.WriteLine($"{host} {bestIp}");
+Console.WriteLine($"{Host} {bestIp}");
 Console.WriteLine("是否设置到Host文件(Y:设置)");
 if (Console.ReadKey().Key != ConsoleKey.Y)
     return;
@@ -77,7 +77,7 @@ async Task TestIpAsync(string ip)
         for (int i = 0; i < 3; i++)
         {
             sw.Start();
-            var r = await url
+            _ = await url
             .WithHeader("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
             .WithHeader("accept-encoding", "gzip, deflate, br")
             .WithHeader("accept-language", "zh-CN,zh;q=0.9")
@@ -106,31 +106,36 @@ async Task<HashSet<string>?> ScanIpAsync()
     Console.WriteLine("开始扫描可用IP,时间较长,请耐心等候");
     var listIp = new HashSet<string>();
     CancellationTokenSource cts = new();
-    cts.Token.Register(() => { Console.WriteLine($"已经找到 {ipLimit} 条IP,结束扫描"); });
+    cts.Token.Register(() => { Console.WriteLine($"已经找到 {IpLimit} 条IP,结束扫描"); });
     foreach (var ipRange in ipRanges)
     {
+        if (string.IsNullOrWhiteSpace(ipRange)) continue;
         IPNetwork ipnetwork = IPNetwork.Parse(ipRange);
         var _ips = new ConcurrentBag<string>();
         //Console.WriteLine(ipRange);
         try
         {
-            await 
+            await
                 Parallel.ForEachAsync(
                 ipnetwork.ListIPAddress(FilterEnum.Usable),
-                new ParallelOptions() { 
-                    MaxDegreeOfParallelism = maxDegreeOfParallelism, 
-                    CancellationToken = cts.Token },
+                new ParallelOptions()
+                {
+                    MaxDegreeOfParallelism = MaxDegreeOfParallelism,
+                    CancellationToken = cts.Token
+                },
                     async (ip, ct) =>
                     {
                         try
                         {
-                            _ = await $"https://{ip}/"
-                            .WithTimeout(timeout)
-                            .WithHeader("host", "about.google")
+                            var result = await $"http://{ip}/translate_a/single?client=gtx&sl=en&tl=fr&q=a/"
+                            .WithTimeout(Timeout)
+                            .WithHeader("host", Host)
                             .GetStringAsync();
+                            if (!result.Equals("[null,null,\"en\",null,null,null,null,[]]"))
+                                return;
                             Console.WriteLine($"找到IP: {ip}");
                             _ips.Add(ip.ToString());
-                            if (listIp.Count + _ips.Count >= ipLimit)
+                            if (listIp.Count + _ips.Count >= IpLimit)
                                 cts.Cancel();
                         }
                         catch { }
@@ -141,7 +146,7 @@ async Task<HashSet<string>?> ScanIpAsync()
         {
             foreach (var ip in _ips)
             {
-                listIp.Add(ip.ToString());
+                listIp.Add(ip);
             }
         }
     }
@@ -198,8 +203,8 @@ async Task<string[]?> ReadRemoteIpAsync()
 {
     try
     {
-        var text = await remoteIp.WithTimeout(10).GetStringAsync();
-        return text.Trim().Split(new string[] { Environment.NewLine },
+        var text = await RemoteIp.WithTimeout(10).GetStringAsync();
+        return text.Trim().Split(new[] { Environment.NewLine },
             StringSplitOptions.RemoveEmptyEntries);
     }
     catch
@@ -224,22 +229,22 @@ async Task SetHostFileAsync()
             Environment.GetFolderPath(Environment.SpecialFolder.System),
             @"drivers\etc\hosts");
 
-    var ip = $"{bestIp} {host}";
+    var ip = $"{bestIp} {Host}";
     File.SetAttributes(hostFile, FileAttributes.Normal);
     var lines = await File.ReadAllLinesAsync(hostFile);
-    if (lines.Any(s => s.Contains("translate.googleapis.com")))
+    if (lines.Any(s => s.Contains(Host)))
     {
         for (var i = 0; i < lines.Length; i++)
         {
-            if (lines[i].Contains("translate.googleapis.com"))
+            if (lines[i].Contains(Host))
                 lines[i] = ip;
         }
         await File.WriteAllLinesAsync(hostFile, lines);
     }
     else if (!lines.Contains(ip))
     {
-        await File.AppendAllLinesAsync(hostFile, new String[] { Environment.NewLine });
-        await File.AppendAllLinesAsync(hostFile, new String[] { ip });
+        await File.AppendAllLinesAsync(hostFile, new[] { Environment.NewLine });
+        await File.AppendAllLinesAsync(hostFile, new[] { ip });
     }
 }
 

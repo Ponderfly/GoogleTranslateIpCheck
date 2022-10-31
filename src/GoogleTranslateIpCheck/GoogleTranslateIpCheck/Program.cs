@@ -56,14 +56,22 @@ if (times.Count == 0)
 var bestIp = times.MinBy(x => x.Value).Key;
 Console.WriteLine($"最佳IP为: {bestIp} 响应时间 {times.MinBy(x => x.Value).Value} ms");
 await SaveIpFileAsync();
-Console.WriteLine("设置Host文件需要管理员权限,可能会被安全软件拦截,建议手工复制以下文本到Host文件");
+Console.WriteLine("设置Host文件需要管理员权限(Mac,Linux使用sudo运行),可能会被安全软件拦截,建议手工复制以下文本到Host文件");
 Console.WriteLine($"{bestIp} {Host}");
 Console.WriteLine("是否设置到Host文件(Y:设置)");
 if (Console.ReadKey().Key != ConsoleKey.Y)
     return;
 Console.WriteLine();
-try { await SetHostFileAsync(); }
-catch (Exception ex) { Console.WriteLine($"设置失败:{ex.Message}"); }
+try
+{
+    await SetHostFileAsync();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"设置失败:{ex.Message}");
+    Console.ReadKey();
+    return;
+}
 Console.WriteLine("设置成功");
 Console.ReadKey();
 
@@ -141,7 +149,7 @@ async Task<HashSet<string>?> ScanIpAsync()
                         catch { }
                     });
         }
-        catch { break; }
+        catch { continue; }
         finally
         {
             foreach (var ip in _ips)
@@ -216,18 +224,19 @@ async Task<string[]?> ReadRemoteIpAsync()
 
 async Task SetHostFileAsync()
 {
-    //string hostFile = string.Empty;
-    //if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
-    //    hostFile = Path.Combine(
-    //        Environment.GetFolderPath(Environment.SpecialFolder.System),
-    //        @"drivers\etc\hosts");
-    //else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX))
-    //    hostFile = "/etc/hosts";
-    //else
-    //    throw new Exception("暂不支持");
-    var hostFile = Path.Combine(
+    string hostFile = string.Empty;
+    if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
+        hostFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.System),
             @"drivers\etc\hosts");
+    else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX)
+        || System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
+        hostFile = "/etc/hosts";
+    else
+        throw new Exception("暂不支持配置HOST文件");
+    //var hostFile = Path.Combine(
+    //        Environment.GetFolderPath(Environment.SpecialFolder.System),
+    //        @"drivers\etc\hosts");
 
     var ip = $"{bestIp} {Host}";
     File.SetAttributes(hostFile, FileAttributes.Normal);
@@ -250,7 +259,7 @@ async Task SetHostFileAsync()
 
 async Task SaveIpFileAsync()
 {
-    await File.WriteAllLinesAsync("ip.txt", ips, Encoding.UTF8);
+    await File.WriteAllLinesAsync("ip.txt", times.Keys, Encoding.UTF8);
 }
 
 public partial class RegexStuff

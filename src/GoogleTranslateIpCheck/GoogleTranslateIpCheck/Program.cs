@@ -57,7 +57,7 @@ var bestIp = times.MinBy(x => x.Value).Key;
 Console.WriteLine($"最佳IP为: {bestIp} 响应时间 {times.MinBy(x => x.Value).Value} ms");
 await SaveIpFileAsync();
 Console.WriteLine("设置Host文件需要管理员权限,可能会被安全软件拦截,建议手工复制以下文本到Host文件");
-Console.WriteLine($"{Host} {bestIp}");
+Console.WriteLine($"{bestIp} {Host}");
 Console.WriteLine("是否设置到Host文件(Y:设置)");
 if (Console.ReadKey().Key != ConsoleKey.Y)
     return;

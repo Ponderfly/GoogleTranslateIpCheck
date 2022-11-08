@@ -1,26 +1,30 @@
 ﻿using Flurl.Http;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
+const string configFile = "config.json";
+const string ipFile = "ip.txt";
 const string Host = "translate.googleapis.com";
-const string RemoteIp = @"https://raw.githubusercontent.com/hcfyapp/google-translate-cn-ip/main/ips.txt";
-const int IpLimit = 5;
-const int Timeout = 4;
-const int MaxDegreeOfParallelism = 80;
-//const string HTTPVerifyHosts = "about.google";
-var ipRanges =
-    """"
-	142.250.0.0/15
-	172.217.0.0/16
-	172.253.0.0/16
-	108.177.0.0/17
-	72.14.192.0/18
-	74.125.0.0/16
-	216.58.192.0/19
-	"""".Split(Environment.NewLine);
+
+var config = new Config();
+if (File.Exists(configFile))
+{
+    try
+    {
+        var json = File.ReadAllText(configFile);
+        config = JsonSerializer.Deserialize(json, MyJsonContext.Default.Config);
+    }
+    catch
+    {
+        Console.WriteLine("读取配置出错,将采用默认配置");
+    }
+}
 
 HashSet<string>? ips = null;
 if (args.Length > 0)
@@ -34,20 +38,19 @@ ips ??= await ReadIpAsync();
 if (ips is null || ips?.Count == 0)
 {
     ips = await ScanIpAsync();
-    //Console.WriteLine("ip.txt 格式为每行一条IP");
-    //Console.WriteLine("172.253.114.90");
-    //Console.WriteLine("172.253.113.90");
-    //Console.WriteLine("或者为 , 分割");
-    //Console.WriteLine("172.253.114.90,172.253.113.90");
-    //Console.ReadKey();
-    //return;
 }
 Dictionary<string, long> times = new();
 Console.WriteLine("开始检测IP响应时间");
-foreach (var ip in ips!)
+await Parallel.ForEachAsync(ips!, new ParallelOptions()
 {
-    await TestIpAsync(ip);
-}
+    MaxDegreeOfParallelism = config!.扫描并发数
+}, async (ip, _) =>
+{
+    {
+        await TestIpAsync(ip);
+    }
+});
+
 if (times.Count == 0)
 {
     Console.WriteLine("未找到可用IP,可删除 ip.txt 文件直接进入扫描模式");
@@ -92,12 +95,11 @@ async Task TestIpAsync(string ip)
             .WithHeader("sec-ch-ua", "\"Chromium\";v=\"106\", \"Not;A=Brand\";v=\"99\", \"Google Chrome\";v=\"106.0.5249.119\"")
             .WithHeader("host", "translate.googleapis.com")
             .WithHeader("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36")
-            .WithTimeout(3)
+            .WithTimeout(config!.扫描超时)
             .GetStringAsync();
             sw.Stop();
             if (sw.ElapsedMilliseconds < time)
                 time = sw.ElapsedMilliseconds;
-            //Console.WriteLine($"{ip}: 响应时间 {sw.ElapsedMilliseconds} ms");
             sw.Reset();
         }
         times.Add(ip, time);
@@ -114,8 +116,8 @@ async Task<HashSet<string>?> ScanIpAsync()
     Console.WriteLine("开始扫描可用IP,时间较长,请耐心等候");
     var listIp = new HashSet<string>();
     CancellationTokenSource cts = new();
-    cts.Token.Register(() => { Console.WriteLine($"已经找到 {IpLimit} 条IP,结束扫描"); });
-    foreach (var ipRange in ipRanges)
+    cts.Token.Register(() => { Console.WriteLine($"已经找到 {config!.IP扫描限制数量} 条IP,结束扫描"); });
+    foreach (var ipRange in config!.IP段)
     {
         if (string.IsNullOrWhiteSpace(ipRange)) continue;
         IPNetwork ipnetwork = IPNetwork.Parse(ipRange);
@@ -128,7 +130,7 @@ async Task<HashSet<string>?> ScanIpAsync()
                 ipnetwork.ListIPAddress(FilterEnum.Usable),
                 new ParallelOptions()
                 {
-                    MaxDegreeOfParallelism = MaxDegreeOfParallelism,
+                    MaxDegreeOfParallelism = config!.扫描并发数,
                     CancellationToken = cts.Token
                 },
                     async (ip, ct) =>
@@ -136,14 +138,14 @@ async Task<HashSet<string>?> ScanIpAsync()
                         try
                         {
                             var result = await $"http://{ip}/translate_a/single?client=gtx&sl=en&tl=fr&q=a/"
-                            .WithTimeout(Timeout)
+                            .WithTimeout(config!.扫描超时)
                             .WithHeader("host", Host)
                             .GetStringAsync();
                             if (!result.Equals("[null,null,\"en\",null,null,null,null,[]]"))
                                 return;
                             Console.WriteLine($"找到IP: {ip}");
                             _ips.Add(ip.ToString());
-                            if (listIp.Count + _ips.Count >= IpLimit)
+                            if (listIp.Count + _ips.Count >= config!.IP扫描限制数量)
                                 cts.Cancel();
                         }
                         catch { }
@@ -166,7 +168,7 @@ async Task<HashSet<string>?> ScanIpAsync()
 async Task<HashSet<string>?> ReadIpAsync()
 {
     string[]? lines;
-    if (!File.Exists("ip.txt"))
+    if (!File.Exists(ipFile))
     {
         Console.WriteLine("未能找到IP文件");
         Console.WriteLine("尝试从服务器获取IP");
@@ -176,7 +178,7 @@ async Task<HashSet<string>?> ReadIpAsync()
     }
     else
     {
-        lines = File.ReadAllLines("ip.txt");
+        lines = File.ReadAllLines(ipFile);
         if (lines.Length < 1)
         {
             lines = await ReadRemoteIpAsync();
@@ -211,8 +213,8 @@ async Task<string[]?> ReadRemoteIpAsync()
 {
     try
     {
-        var text = await RemoteIp.WithTimeout(10).GetStringAsync();
-        return text.Trim().Split(new[] { Environment.NewLine },
+        var text = await config!.远程IP文件.WithTimeout(10).GetStringAsync();
+        return text.Split(new[] { '\n' },
             StringSplitOptions.RemoveEmptyEntries);
     }
     catch
@@ -234,9 +236,6 @@ async Task SetHostFileAsync()
         hostFile = "/etc/hosts";
     else
         throw new Exception("暂不支持配置HOST文件");
-    //var hostFile = Path.Combine(
-    //        Environment.GetFolderPath(Environment.SpecialFolder.System),
-    //        @"drivers\etc\hosts");
 
     var ip = $"{bestIp} {Host}";
     File.SetAttributes(hostFile, FileAttributes.Normal);
@@ -259,11 +258,34 @@ async Task SetHostFileAsync()
 
 async Task SaveIpFileAsync()
 {
-    await File.WriteAllLinesAsync("ip.txt", times.Keys, Encoding.UTF8);
+    await File.WriteAllLinesAsync(ipFile, times.Keys, Encoding.UTF8);
 }
 
 public partial class RegexStuff
 {
     [GeneratedRegex(@"^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")]
     public static partial Regex IpRegex();
+}
+
+public class Config
+{
+    public string 远程IP文件 { get; set; } = "https://ghproxy.com/https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.1.1/ips.txt";
+    public int IP扫描限制数量 { get; set; } = 5;
+    public int 扫描超时 { get; set; } = 4;
+    public int 扫描并发数 { get; set; } = 80;
+    public string[] IP段 { get; set; } =
+    """"
+	142.250.0.0/15
+	172.217.0.0/16
+	172.253.0.0/16
+	108.177.0.0/17
+	72.14.192.0/18
+	74.125.0.0/16
+	216.58.192.0/19
+	"""".Split(Environment.NewLine);
+}
+
+[JsonSerializable(typeof(Config))]
+internal partial class MyJsonContext : JsonSerializerContext
+{
 }

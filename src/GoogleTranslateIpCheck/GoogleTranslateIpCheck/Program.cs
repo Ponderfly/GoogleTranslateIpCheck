@@ -1,5 +1,4 @@
 ﻿using Flurl.Http;
-using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
@@ -26,10 +25,15 @@ if (File.Exists(configFile))
     }
 }
 
+var autoSet = false;
 HashSet<string>? ips = null;
 if (args.Length > 0)
 {
-    if ("-s".Equals(args[0], StringComparison.OrdinalIgnoreCase))
+    if (args.Any(x => "-y".Equals(x, StringComparison.OrdinalIgnoreCase)))
+    {
+        autoSet = true;
+    }
+    if (args.Any(x => "-s".Equals(x, StringComparison.OrdinalIgnoreCase)))
     {
         ips = await ScanIpAsync();
     }
@@ -39,7 +43,7 @@ if (ips is null || ips?.Count == 0)
 {
     ips = await ScanIpAsync();
 }
-Dictionary<string, long> times = new();
+ConcurrentDictionary<string, long> times = new();
 Console.WriteLine("开始检测IP响应时间");
 await Parallel.ForEachAsync(ips!, new ParallelOptions()
 {
@@ -60,10 +64,14 @@ var bestIp = times.MinBy(x => x.Value).Key;
 Console.WriteLine($"最佳IP为: {bestIp} 响应时间 {times.MinBy(x => x.Value).Value} ms");
 await SaveIpFileAsync();
 Console.WriteLine("设置Host文件需要管理员权限(Mac,Linux使用sudo运行),可能会被安全软件拦截,建议手工复制以下文本到Host文件");
+Console.WriteLine();
 Console.WriteLine($"{bestIp} {Host}");
-Console.WriteLine("是否设置到Host文件(Y:设置)");
-if (Console.ReadKey().Key != ConsoleKey.Y)
-    return;
+if (!autoSet)
+{
+    Console.WriteLine("是否设置到Host文件(Y:设置)");
+    if (Console.ReadKey().Key != ConsoleKey.Y)
+        return;
+}
 Console.WriteLine();
 try
 {
@@ -80,12 +88,14 @@ Console.ReadKey();
 
 async Task TestIpAsync(string ip)
 {
-    try
+
+    var url = $@"http://{ip}/translate_a/single?client=gtx&sl=en&tl=fr&q=a";
+    Stopwatch sw = new();
+    var time = 3000L;
+    var flag = false;
+    for (int i = 0; i < 5; i++)
     {
-        var url = $@"http://{ip}/translate_a/single?client=gtx&sl=en&tl=fr&q=a";
-        Stopwatch sw = new();
-        var time = 3000L;
-        for (int i = 0; i < 3; i++)
+        try
         {
             sw.Start();
             _ = await url
@@ -101,14 +111,20 @@ async Task TestIpAsync(string ip)
             if (sw.ElapsedMilliseconds < time)
                 time = sw.ElapsedMilliseconds;
             sw.Reset();
+            flag = false;
         }
-        times.Add(ip, time);
-        Console.WriteLine($"{ip}: 响应时间 {time} ms");
+        catch (Exception)
+        {
+            flag = true;
+        }
     }
-    catch (Exception)
+    if (flag)
     {
         Console.WriteLine($"{ip}: 超时");
+        return;
     }
+    times.TryAdd(ip, time);
+    Console.WriteLine($"{ip}: 响应时间 {time} ms");
 }
 
 async Task<HashSet<string>?> ScanIpAsync()
@@ -122,7 +138,6 @@ async Task<HashSet<string>?> ScanIpAsync()
         if (string.IsNullOrWhiteSpace(ipRange)) continue;
         IPNetwork ipnetwork = IPNetwork.Parse(ipRange);
         var _ips = new ConcurrentBag<string>();
-        //Console.WriteLine(ipRange);
         try
         {
             await
@@ -226,7 +241,7 @@ async Task<string[]?> ReadRemoteIpAsync()
 
 async Task SetHostFileAsync()
 {
-    string hostFile = string.Empty;
+    string hostFile;
     if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
         hostFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.System),

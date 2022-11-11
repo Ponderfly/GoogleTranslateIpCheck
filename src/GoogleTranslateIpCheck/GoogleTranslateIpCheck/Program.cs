@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 
 const string configFile = "config.json";
 const string ipFile = "ip.txt";
@@ -30,13 +31,9 @@ HashSet<string>? ips = null;
 if (args.Length > 0)
 {
     if (args.Any(x => "-y".Equals(x, StringComparison.OrdinalIgnoreCase)))
-    {
         autoSet = true;
-    }
     if (args.Any(x => "-s".Equals(x, StringComparison.OrdinalIgnoreCase)))
-    {
         ips = await ScanIpAsync();
-    }
 }
 ips ??= await ReadIpAsync();
 if (ips is null || ips?.Count == 0)
@@ -64,8 +61,13 @@ var bestIp = times.MinBy(x => x.Value).Key;
 Console.WriteLine($"最佳IP为: {bestIp} 响应时间 {times.MinBy(x => x.Value).Value} ms");
 await SaveIpFileAsync();
 Console.WriteLine("设置Host文件需要管理员权限(Mac,Linux使用sudo运行),可能会被安全软件拦截,建议手工复制以下文本到Host文件");
+if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+    Console.WriteLine(@"Host文件路径为 C:\Windows\System32\drivers\etc\hosts (需去掉只读属性)");
+if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+    Console.WriteLine(@"Host文件路径为 /etc/hosts ");
 Console.WriteLine();
 Console.WriteLine($"{bestIp} {Host}");
+Console.WriteLine();
 if (!autoSet)
 {
     Console.WriteLine("是否设置到Host文件(Y:设置)");
@@ -242,12 +244,12 @@ async Task<string[]?> ReadRemoteIpAsync()
 async Task SetHostFileAsync()
 {
     string hostFile;
-    if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         hostFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.System),
             @"drivers\etc\hosts");
-    else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX)
-        || System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
+    else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+             || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         hostFile = "/etc/hosts";
     else
         throw new Exception("暂不支持配置HOST文件");

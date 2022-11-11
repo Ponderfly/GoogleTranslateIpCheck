@@ -10,18 +10,15 @@ sudo ./GoogleTranslateIpCheck
 ```
 
 ##### 下载地址
-```
-Mac
+
+##### Mac OS
 https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.3/GoogleTranslateIpCheck-mac-arm64.zip
 https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.3/GoogleTranslateIpCheck-mac-x64.zip
-```
-```
-Window
+
+##### Window
 https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.3/GoogleTranslateIpCheck-win-x64.zip
-```
-```
-Linux
+
+##### Linux
 https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.3/GoogleTranslateIpCheck-linux-x64.zip
-```
 
 #### 扫描逻辑参考 https://repo.or.cz/gscan_quic.git 项目,感谢大佬

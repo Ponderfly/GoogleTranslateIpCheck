@@ -82,21 +82,12 @@ async Task TestIpAsync(string ip)
 {
     try
     {
-        var url = $@"http://{ip}/translate_a/single?client=gtx&sl=en&tl=fr&q=a";
         Stopwatch sw = new();
         var time = 3000L;
         for (int i = 0; i < 3; i++)
         {
             sw.Start();
-            _ = await url
-            .WithHeader("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
-            .WithHeader("accept-encoding", "gzip, deflate, br")
-            .WithHeader("accept-language", "zh-CN,zh;q=0.9")
-            .WithHeader("sec-ch-ua", "\"Chromium\";v=\"106\", \"Not;A=Brand\";v=\"99\", \"Google Chrome\";v=\"106.0.5249.119\"")
-            .WithHeader("host", "translate.googleapis.com")
-            .WithHeader("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36")
-            .WithTimeout(config!.扫描超时)
-            .GetStringAsync();
+            _ = await GetResultAsync(ip);
             sw.Stop();
             if (sw.ElapsedMilliseconds < time)
                 time = sw.ElapsedMilliseconds;
@@ -122,7 +113,6 @@ async Task<HashSet<string>?> ScanIpAsync()
         if (string.IsNullOrWhiteSpace(ipRange)) continue;
         IPNetwork ipnetwork = IPNetwork.Parse(ipRange);
         var _ips = new ConcurrentBag<string>();
-        //Console.WriteLine(ipRange);
         try
         {
             await
@@ -137,11 +127,8 @@ async Task<HashSet<string>?> ScanIpAsync()
                     {
                         try
                         {
-                            var result = await $"http://{ip}/translate_a/single?client=gtx&sl=en&tl=fr&q=a/"
-                            .WithTimeout(config!.扫描超时)
-                            .WithHeader("host", Host)
-                            .GetStringAsync();
-                            if (!result.Equals("[null,null,\"en\",null,null,null,null,[]]"))
+                            var result = await GetResultAsync(ip.ToString());
+                            if (!result)
                                 return;
                             Console.WriteLine($"找到IP: {ip}");
                             _ips.Add(ip.ToString());
@@ -164,6 +151,14 @@ async Task<HashSet<string>?> ScanIpAsync()
     return listIp;
 }
 
+async Task<bool> GetResultAsync(string ip)
+{
+    var url = $@"http://{ip}/translate_a/single?client=gtx&sl=en&tl=fr&q=a";
+    return (await url
+        .WithHeader("host", Host)
+        .WithTimeout(config!.扫描超时)
+        .GetStringAsync()).Equals(("[null,null,\"en\",null,null,null,null,[]]"));
+}
 
 async Task<HashSet<string>?> ReadIpAsync()
 {

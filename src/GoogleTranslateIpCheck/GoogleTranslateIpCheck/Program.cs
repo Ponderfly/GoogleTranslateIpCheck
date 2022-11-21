@@ -90,11 +90,9 @@ Console.ReadKey();
 
 async Task TestIpAsync(string ip)
 {
-    try
-    {
-        Stopwatch sw = new();
-        var time = 3000L;
-        var flag = false;
+    Stopwatch sw = new();
+    var time = 3000L;
+    var flag = false;
     for (int i = 0; i < 5; i++)
     {
         try

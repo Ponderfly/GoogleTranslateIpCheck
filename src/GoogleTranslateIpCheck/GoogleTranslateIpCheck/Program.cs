@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 const string configFile = "config.json";
 const string ipFile = "ip.txt";
 const string Host = "translate.googleapis.com";
+const string Host2 = "translate.google.com";
 
 var config = new Config();
 if (File.Exists(configFile))
@@ -86,6 +87,7 @@ catch (Exception ex)
     return;
 }
 Console.WriteLine("设置成功");
+await FlushDns();
 Console.ReadKey();
 
 async Task TestIpAsync(string ip)
@@ -250,27 +252,87 @@ async Task SetHostFileAsync()
         throw new Exception("暂不支持配置HOST文件");
 
     var ip = $"{bestIp} {Host}";
+    var ip2 = $"{bestIp} {Host2}";
     File.SetAttributes(hostFile, FileAttributes.Normal);
-    var lines = await File.ReadAllLinesAsync(hostFile);
-    if (lines.Any(s => s.Contains(Host)))
+    var lines = (await File.ReadAllLinesAsync(hostFile)).ToList();
+    void Update(string host)
     {
-        for (var i = 0; i < lines.Length; i++)
+        for (var i = 0; i < lines!.Count; i++)
         {
-            if (lines[i].Contains(Host))
-                lines[i] = ip;
+            if (lines[i].Contains(host))
+                lines[i] = $"{bestIp} {host}";
         }
-        await File.WriteAllLinesAsync(hostFile, lines);
     }
-    else if (!lines.Contains(ip))
+    void Add(string s)
     {
-        await File.AppendAllLinesAsync(hostFile, new[] { Environment.NewLine });
-        await File.AppendAllLinesAsync(hostFile, new[] { ip });
+        lines.Add(Environment.NewLine);
+        lines.Add(s);
     }
+    if (lines.Any(s => s.Contains(Host)))
+        Update(Host);
+    else
+        Add(ip);
+    if (lines.Any(s => s.Contains(Host2)))
+        Update(Host2);
+    else
+        Add(ip2);      
+    await File.WriteAllLinesAsync(hostFile, lines);
 }
 
 async Task SaveIpFileAsync()
 {
     await File.WriteAllLinesAsync(ipFile, times.Keys, Encoding.UTF8);
+}
+
+async Task FlushDns()
+{
+    var sb = new StringBuilder();
+    string fileName;
+    string arguments;
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+    {
+        fileName = "ipconfig.exe";
+        arguments = "/flushdns";
+    }
+    else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+    {
+        fileName = "killall";
+        arguments = "-HUP mDNSResponder";
+    }
+    else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+    {
+        fileName = "systemctl";
+        arguments = "restart systemd-resolved";
+    }
+    else
+    {
+        return;
+    }
+    try
+    {
+        var process = new Process()
+        {
+            StartInfo = new ProcessStartInfo()
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            }
+        };
+        process.Start();
+        sb.Append(await process.StandardOutput.ReadToEndAsync());
+        sb.Append(await process.StandardError.ReadToEndAsync());
+        await process.WaitForExitAsync();
+        process.Close();
+        Console.WriteLine(sb.ToString());
+    }
+    catch (Exception e)
+    {
+        Console.WriteLine(e);
+    }
 }
 
 public partial class RegexStuff

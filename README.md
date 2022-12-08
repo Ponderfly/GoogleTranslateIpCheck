@@ -9,7 +9,7 @@ chmod +x GoogleTranslateIpCheck
 sudo ./GoogleTranslateIpCheck
 ```
 
-##### 下载地址
+#### 下载地址
 
 ##### Mac OS
 ##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.4/GoogleTranslateIpCheck-mac.zip
@@ -19,5 +19,15 @@ sudo ./GoogleTranslateIpCheck
 
 ##### Linux
 ##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.4/GoogleTranslateIpCheck-linux-x64.zip
+
+#### 常见问题
+##### 1.如果所有IP都超时,请检查是否开了代理 
+##### 2.Mac 中使用: 打开终端 输入cd 把解压后的文件夹拖进终端，点击回车 复制粘贴代码，点击回车
+```
+chmod +x GoogleTranslateIpCheck
+sudo ./GoogleTranslateIpCheck
+```
+##### 3.Mac 提示来自不明身份: 系统偏好设置－－>安全性与隐私--->选择允许
+
 
 #### 扫描逻辑参考 https://repo.or.cz/gscan_quic.git 项目,感谢大佬

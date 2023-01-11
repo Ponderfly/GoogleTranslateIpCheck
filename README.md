@@ -12,7 +12,7 @@ sudo ./GoogleTranslateIpCheck
 #### 下载地址
 
 ##### Mac OS
-##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.5/GoogleTranslateIpCheck-mac.zip
+##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.5/GoogleTranslateIpCheck-mac-x64.zip
 
 ##### Window
 ##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.5/GoogleTranslateIpCheck-win-x64.zip

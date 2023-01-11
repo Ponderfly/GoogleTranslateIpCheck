@@ -172,11 +172,11 @@ async Task<HashSet<string>?> ScanIpAsync()
 
 async Task<bool> GetResultAsync(string ip)
 {
-    var url = $@"http://{ip}/translate_a/single?client=gtx&sl=en&tl=fr&q=a";
+    var url = $@"https://{ip}/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=你好";
     return (await url
         .WithHeader("host", Host)
         .WithTimeout(config!.扫描超时)
-        .GetStringAsync()).Equals(("[null,null,\"en\",null,null,null,null,[]]"));
+        .GetStringAsync()).Equals(("[[[\"Hello\",\"你好\",null,null,10]],null,\"zh-CN\",null,null,null,1,[],[[\"zh-CN\"],null,[1],[\"zh-CN\"]]]"));
 }
 
 async Task<HashSet<string>?> ReadIpAsync()

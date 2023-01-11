@@ -12,13 +12,13 @@ sudo ./GoogleTranslateIpCheck
 #### 下载地址
 
 ##### Mac OS
-##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.4/GoogleTranslateIpCheck-mac.zip
+##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.5/GoogleTranslateIpCheck-mac.zip
 
 ##### Window
-##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.4/GoogleTranslateIpCheck-win-x64.zip
+##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.5/GoogleTranslateIpCheck-win-x64.zip
 
 ##### Linux
-##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.4/GoogleTranslateIpCheck-linux-x64.zip
+##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.5/GoogleTranslateIpCheck-linux-x64.zip
 
 #### 常见问题
 ##### 1.如果所有IP都超时,请检查是否开了代理 

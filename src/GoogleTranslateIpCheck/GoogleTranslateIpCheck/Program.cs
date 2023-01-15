@@ -56,10 +56,16 @@ await Parallel.ForEachAsync(ips!, new ParallelOptions()
 if (times.Count == 0)
 {
     Console.WriteLine("未找到可用IP,可删除 ip.txt 文件直接进入扫描模式");
+    Console.ReadKey();
     return;
 }
-var bestIp = times.MinBy(x => x.Value).Key;
-Console.WriteLine($"最佳IP为: {bestIp} 响应时间 {times.MinBy(x => x.Value).Value} ms");
+Console.WriteLine();
+Console.WriteLine("检测IP完毕,按照响应时间排序结果");
+var sortList = times.OrderByDescending(x => x.Value);
+foreach (var x in sortList)
+    Console.WriteLine($"{x.Key}: 响应时间 {x.Value} ms");
+var bestIp = sortList.Last().Key;
+Console.WriteLine($"最佳IP为: {bestIp} 响应时间 {sortList.Last().Value} ms");
 await SaveIpFileAsync();
 Console.WriteLine("设置Host文件需要管理员权限(Mac,Linux使用sudo运行),可能会被安全软件拦截,建议手工复制以下文本到Host文件");
 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -68,6 +74,7 @@ if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPl
     Console.WriteLine(@"Host文件路径为 /etc/hosts ");
 Console.WriteLine();
 Console.WriteLine($"{bestIp} {Host}");
+Console.WriteLine($"{bestIp} {Host2}");
 Console.WriteLine();
 if (!autoSet)
 {
@@ -88,7 +95,8 @@ catch (Exception ex)
 }
 Console.WriteLine("设置成功");
 await FlushDns();
-Console.ReadKey();
+if (!autoSet)
+    Console.ReadKey();
 
 async Task TestIpAsync(string ip)
 {
@@ -172,11 +180,11 @@ async Task<HashSet<string>?> ScanIpAsync()
 
 async Task<bool> GetResultAsync(string ip)
 {
-    var url = $@"https://{ip}/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=你好";
+    var url = $@"https://{ip}/translate_a/single?client=gtx&sl=zh-CN&tl=en&dt=t&q=你好";
     return (await url
         .WithHeader("host", Host)
         .WithTimeout(config!.扫描超时)
-        .GetStringAsync()).Equals(("[[[\"Hello\",\"你好\",null,null,10]],null,\"zh-CN\",null,null,null,1,[],[[\"zh-CN\"],null,[1],[\"zh-CN\"]]]"));
+        .GetStringAsync()).Contains("Hello");
 }
 
 async Task<HashSet<string>?> ReadIpAsync()
@@ -275,7 +283,7 @@ async Task SetHostFileAsync()
     if (lines.Any(s => s.Contains(Host2)))
         Update(Host2);
     else
-        Add(ip2);      
+        Add(ip2);
     await File.WriteAllLinesAsync(hostFile, lines);
 }
 
@@ -310,7 +318,7 @@ async Task FlushDns()
     }
     try
     {
-        var process = new Process()
+        using var process = new Process()
         {
             StartInfo = new ProcessStartInfo()
             {

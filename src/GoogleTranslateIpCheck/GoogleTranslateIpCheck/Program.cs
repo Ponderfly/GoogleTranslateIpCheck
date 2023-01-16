@@ -9,10 +9,10 @@ using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 
 const string configFile = "config.json";
-const string ipFile = "ip.txt";
 const string Host = "translate.googleapis.com";
 const string Host2 = "translate.google.com";
 
+Console.WriteLine("如果支持IPv6推荐优先使用,使用参数 -6 启动");
 var config = new Config();
 if (File.Exists(configFile))
 {
@@ -28,9 +28,16 @@ if (File.Exists(configFile))
 }
 
 var autoSet = false;
+var isIPv6 = false;
+string ipFile = "ip.txt";
 HashSet<string>? ips = null;
 if (args.Length > 0)
 {
+    if (args.Any(x => "-6".Equals(x)))
+    {
+        isIPv6 = true;
+        ipFile = "IPv6.txt";
+    }
     if (args.Any(x => "-y".Equals(x, StringComparison.OrdinalIgnoreCase)))
         autoSet = true;
     if (args.Any(x => "-s".Equals(x, StringComparison.OrdinalIgnoreCase)))
@@ -38,11 +45,11 @@ if (args.Length > 0)
 }
 ips ??= await ReadIpAsync();
 if (ips is null || ips?.Count == 0)
-{
     ips = await ScanIpAsync();
-}
 ConcurrentDictionary<string, long> times = new();
+Console.WriteLine();
 Console.WriteLine("开始检测IP响应时间");
+Console.WriteLine();
 await Parallel.ForEachAsync(ips!, new ParallelOptions()
 {
     MaxDegreeOfParallelism = config!.扫描并发数
@@ -61,6 +68,7 @@ if (times.Count == 0)
 }
 Console.WriteLine();
 Console.WriteLine("检测IP完毕,按照响应时间排序结果");
+Console.WriteLine();
 var sortList = times.OrderByDescending(x => x.Value);
 foreach (var x in sortList)
     Console.WriteLine($"{x.Key}: 响应时间 {x.Value} ms");
@@ -135,7 +143,8 @@ async Task<HashSet<string>?> ScanIpAsync()
     var listIp = new HashSet<string>();
     CancellationTokenSource cts = new();
     cts.Token.Register(() => { Console.WriteLine($"已经找到 {config!.IP扫描限制数量} 条IP,结束扫描"); });
-    foreach (var ipRange in config!.IP段)
+    var IP段 = !isIPv6 ? config!.IP段 : config!.IPv6段;
+    foreach (var ipRange in IP段)
     {
         if (string.IsNullOrWhiteSpace(ipRange)) continue;
         IPNetwork ipnetwork = IPNetwork.Parse(ipRange);
@@ -157,7 +166,7 @@ async Task<HashSet<string>?> ScanIpAsync()
                             var result = await GetResultAsync(ip.ToString());
                             if (!result)
                                 return;
-                            Console.WriteLine($"找到IP: {ip}");
+                            Console.WriteLine($"{ip}");
                             _ips.Add(ip.ToString());
                             if (listIp.Count + _ips.Count >= config!.IP扫描限制数量)
                                 cts.Cancel();
@@ -180,7 +189,8 @@ async Task<HashSet<string>?> ScanIpAsync()
 
 async Task<bool> GetResultAsync(string ip)
 {
-    var url = $@"https://{ip}/translate_a/single?client=gtx&sl=zh-CN&tl=en&dt=t&q=你好";
+    var str = !isIPv6 ? $"{ip}" : $"[{ip}]";
+    var url = $@"https://{str}/translate_a/single?client=gtx&sl=zh-CN&tl=en&dt=t&q=你好";
     return (await url
         .WithHeader("host", Host)
         .WithTimeout(config!.扫描超时)
@@ -217,13 +227,13 @@ async Task<HashSet<string>?> ReadIpAsync()
         {
             foreach (var ip in line.Split(','))
             {
-                if (RegexStuff.IpRegex().IsMatch(ip.Trim()))
+                if (CheckIp(ip))
                     listIp.Add(ip.Trim());
             }
         }
         else
         {
-            if (RegexStuff.IpRegex().IsMatch(line.Trim()))
+            if (CheckIp(line))
                 listIp.Add(line.Trim());
         }
     }
@@ -235,7 +245,8 @@ async Task<string[]?> ReadRemoteIpAsync()
 {
     try
     {
-        var text = await config!.远程IP文件.WithTimeout(10).GetStringAsync();
+        var address = !isIPv6 ? config!.远程IP文件 : config!.远程IPv6文件;
+        var text = await address.WithTimeout(10).GetStringAsync();
         return text.Split(new[] { '\n' },
             StringSplitOptions.RemoveEmptyEntries);
     }
@@ -289,7 +300,7 @@ async Task SetHostFileAsync()
 
 async Task SaveIpFileAsync()
 {
-    await File.WriteAllLinesAsync(ipFile, times.Keys, Encoding.UTF8);
+    await File.WriteAllLinesAsync(ipFile, sortList.Reverse().Select(x => x.Key), Encoding.UTF8);
 }
 
 async Task FlushDns()
@@ -343,15 +354,26 @@ async Task FlushDns()
     }
 }
 
+bool CheckIp(string ip)
+{
+    if (!isIPv6)
+        return RegexStuff.IpRegex().IsMatch(ip.Trim());
+    else
+        return RegexStuff.IPv6Regex().IsMatch(ip.Trim());
+}
+
 public partial class RegexStuff
 {
     [GeneratedRegex(@"^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")]
     public static partial Regex IpRegex();
+    [GeneratedRegex(@"^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:))$")]
+    public static partial Regex IPv6Regex();
 }
 
 public class Config
 {
     public string 远程IP文件 { get; set; } = "https://ghproxy.com/https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.1.1/ips.txt";
+    public string 远程IPv6文件 { get; set; } = "https://ghproxy.com/https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.1.1/IPv6.txt";
     public int IP扫描限制数量 { get; set; } = 5;
     public int 扫描超时 { get; set; } = 4;
     public int 扫描并发数 { get; set; } = 80;
@@ -364,6 +386,16 @@ public class Config
 	72.14.192.0/18
 	74.125.0.0/16
 	216.58.192.0/19
+	"""".Split(Environment.NewLine);
+    public string[] IPv6段 { get; set; } =
+    """"
+	2404:6800:4008:c15::0/112
+	2a00:1450:4001:802::0/112
+	2a00:1450:4001:803::0/112
+	2a00:1450:4001:809::0/112
+	2a00:1450:4001:811::0/112
+	2a00:1450:4001:827::0/112
+	2a00:1450:4001:828::0/112
 	"""".Split(Environment.NewLine);
 }
 

@@ -1,5 +1,6 @@
 {
   "远程IP文件": "https://ghproxy.com/https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.1.1/ips.txt",
+  "远程IPv6文件": "https://ghproxy.com/https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.1.1/IPv6.txt",
   "IP扫描限制数量": 5,
   "扫描超时": 4,
   "扫描并发数": 80,
@@ -11,5 +12,10 @@
     "72.14.192.0/18",
     "74.125.0.0/16",
     "216.58.192.0/19"
+  ],
+  "IPv6段": [
+    "2404:6800:4008:c15::0/112",
+    "2a00:1450:4001:802::0/112",
+    "2a00:1450:4001:803::0/112"
   ]
 }

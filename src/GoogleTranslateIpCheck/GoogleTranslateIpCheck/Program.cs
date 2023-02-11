@@ -372,8 +372,8 @@ public partial class RegexStuff
 
 public class Config
 {
-    public string 远程IP文件 { get; set; } = "https://ghproxy.com/https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.1.1/ips.txt";
-    public string 远程IPv6文件 { get; set; } = "https://ghproxy.com/https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.1.1/IPv6.txt";
+    public string 远程IP文件 { get; set; } = "https://ghproxy.com/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/ip.txt";
+    public string 远程IPv6文件 { get; set; } = "https://ghproxy.com/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/IPv6.txt";
     public int IP扫描限制数量 { get; set; } = 5;
     public int 扫描超时 { get; set; } = 4;
     public int 扫描并发数 { get; set; } = 80;

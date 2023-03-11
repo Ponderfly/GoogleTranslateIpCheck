@@ -1,0 +1,21 @@
+{
+    "RemoteIp": "https://ghproxy.com/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/ip.txt",
+    "RemoteIPV6": "https://ghproxy.com/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/IPv6.txt",
+    "ScanLimit": 5,
+    "ScanTimeout": 4,
+    "ScanSpeed": 80,
+    "IpRange": [
+        "142.250.0.0/15",
+        "172.217.0.0/16",
+        "172.253.0.0/16",
+        "108.177.0.0/17",
+        "72.14.192.0/18",
+        "74.125.0.0/16",
+        "216.58.192.0/19"
+    ],
+    "IPv6Range": [
+        "2404:6800:4008:c15::0/112",
+        "2a00:1450:4001:802::0/112",
+        "2a00:1450:4001:803::0/112"
+    ]
+}

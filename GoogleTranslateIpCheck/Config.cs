@@ -2,9 +2,9 @@
 
 public class Config
 {
-    public string RemoteIp { get; set; } = 
+    public string RemoteIp { get; set; } =
         "https://ghproxy.com/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/GoogleTranslateIpCheck/ip.txt";
-    public string RemoteIPv6 { get; set; } = 
+    public string RemoteIPv6 { get; set; } =
         "https://ghproxy.com/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/GoogleTranslateIpCheck/ipv6.txt";
     public int ScanLimit { get; set; } = 5;
     public int ScanTimeout { get; set; } = 4;

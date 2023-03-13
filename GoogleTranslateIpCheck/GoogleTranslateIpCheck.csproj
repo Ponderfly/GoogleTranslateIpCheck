@@ -11,16 +11,16 @@
         <PackageReference Include="IPNetwork2" Version="2.6.556" />
     </ItemGroup>
     <ItemGroup>
-        <Compile Update="Properties\Text.Designer.cs">
+        <Compile Update="Properties\Texts.Designer.cs">
             <DesignTime>True</DesignTime>
             <AutoGen>True</AutoGen>
-            <DependentUpon>Text.resx</DependentUpon>
+            <DependentUpon>Texts.resx</DependentUpon>
         </Compile>
     </ItemGroup>
     <ItemGroup>
-        <EmbeddedResource Update="Properties\Text.resx">
+        <EmbeddedResource Update="Properties\Texts.resx">
             <Generator>ResXFileCodeGenerator</Generator>
-            <LastGenOutput>Text.Designer.cs</LastGenOutput>
+            <LastGenOutput>Texts.Designer.cs</LastGenOutput>
         </EmbeddedResource>
         <EmbeddedResource Update="Resources\Text.resx">
             <Generator>ResXFileCodeGenerator</Generator>

@@ -9,10 +9,6 @@ on:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        configuration: [Debug, Release]
-
     runs-on: windows-latest
 
     steps:
@@ -22,13 +18,14 @@ jobs:
       - name: Install .NET
         uses: actions/setup-dotnet@v3
 
-      - name: Build Solution
-        run: dotnet build -c $env:Configuration
-        env:
-          Configuration: ${{ matrix.configuration }}
+      - name: Install Warp Tool
+        run: dotnet tool install --global dotnet-warp
 
-      - name: Upload Artifacts
+      - name: Build Solution
+        run: dotnet-warp
+
+      - name: Upload Executable
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.configuration }}
-          path: ./GoogleTranslateIpCheck/bin/${{ matrix.configuration }}/net7.0
+          name: GoogleTranslateIpCheck
+          path: ./GoogleTranslateIpCheck/bin/Release/net7.0/win-x64/native/GoogleTranslateIpCheck.exe

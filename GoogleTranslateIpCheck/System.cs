@@ -17,7 +17,6 @@ public static partial class Program
         string[]? lines;
         if (!File.Exists(IPFile))
         {
-            Console.WriteLine($"{IsIPv6},{IPFile}");
             Console.WriteLine(Texts.IPNotFind);
             lines = await GetRemoteIP(config);
             if (lines is null) return null;

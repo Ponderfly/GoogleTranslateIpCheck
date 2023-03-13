@@ -1,5 +1,5 @@
 # GoogleTranslateIpCheck
- 扫描国内可用的谷歌翻译IP
+ 扫描国内可用的谷歌翻译 IP 地址
 
 ## 使用方法
 
@@ -13,26 +13,24 @@
 > ```
 
 
-+ 删除 ip.txt 文件调用远程 IP 地址或进入扫描模式
++ 删除 `ip.txt`/`ipv6.txt` 文件调用远程 IP 地址或进入扫描模式
 
 | 参数 |             作用              |
 | :--: | :---------------------------: |
 |  -s  |       直接进入扫描模式        |
 |  -y  |      自动写入 Host 文件       |
-|  -6  | IPv6模式 (如果支持请优先使用) |
+|  -6  | IPv6 模式 (如果支持请优先使用) |
 
 ## 下载地址
 
-[macOS 下载地址](https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.6/GoogleTranslateIpCheck-mac-x64.zip)
-
-[Windows 下载地址](https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.6/GoogleTranslateIpCheck-win-x64.zip)
-
-[Linux 下载地址](https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.6/GoogleTranslateIpCheck-linux-x64.zip)
+[macOS](https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.6/GoogleTranslateIpCheck-mac-x64.zip) |
+[Windows](https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.6/GoogleTranslateIpCheck-win-x64.zip) |
+[Linux](https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.6/GoogleTranslateIpCheck-linux-x64.zip)
 
 ## 常见问题
 
-1. 如果所有IP都超时,请检查是否开了代理 
-2. Mac 提示来自不明身份: 系统偏好设置->安全性与隐私->允许
+1. 如果所有 IP 都超时,请检查是否开了代理 
+2. macOS 提示来自不明身份: 系统偏好设置 -> 安全性与隐私 -> 允许`
 
 
 ## 致谢

@@ -5,7 +5,16 @@
         <Nullable>enable</Nullable>
         <PublishAot>true</PublishAot>
         <AnalysisLevel>latest-recommended</AnalysisLevel>
+        <NeutralLanguage>zh-CN</NeutralLanguage>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+        <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
     </PropertyGroup>
+    <ItemGroup>
+      <None Include="..\LICENSE">
+        <Pack>True</Pack>
+        <PackagePath>\</PackagePath>
+      </None>
+    </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Flurl.Http" Version="4.0.0-pre2" />
         <PackageReference Include="IPNetwork2" Version="2.6.556" />

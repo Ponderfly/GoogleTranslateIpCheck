@@ -13,7 +13,7 @@ namespace GoogleTranslateIpCheck;
 public static partial class Program
 {
 
-    private static async Task<bool> ConnectIp(string ip, Config? config)
+    private static async ValueTask<bool> ConnectIp(string ip, Config? config)
     {
         string str = !IsIPv6 ? $"{ip}" : $"[{ip}]";
         string url = $@"https://{str}/translate_a/single?client=gtx&sl=zh-CN&tl=en&dt=t&q=你好";
@@ -73,7 +73,7 @@ public static partial class Program
                     IPMgr.ListIPAddress(FilterEnum.Usable),
                     new ParallelOptions( )
                     {
-                        MaxDegreeOfParallelism = config!.ScanSpeed,
+                        MaxDegreeOfParallelism = config.ScanSpeed,
                         CancellationToken = tokenSource.Token
                     },
                     async (addr, _) =>

@@ -56,7 +56,7 @@ public static partial class Program
             string text = await address.WithTimeout(10).GetStringAsync( );
             return text.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         }
-        catch
+        catch (FlurlHttpException)
         {
             Console.WriteLine(Texts.RemoteIPFail);
             return null;
@@ -93,37 +93,36 @@ public static partial class Program
         }
         if (hosts.Any(s => s.Contains(HostApi)))
             Update(HostApi);
-        else
-            Add(HostApi);
+        else Add(HostApi);
         if (hosts.Any(s => s.Contains(HostSite)))
             Update(HostSite);
-        else
-            Add(HostSite);
+        else Add(HostSite);
         File.WriteAllLines(hostFile, hosts);
     }
 
     private static void SaveIP(string ipPath, IOrderedEnumerable<KeyValuePair<string, long>> sortList)
     {
-        File.WriteAllLines(ipPath, sortList.Reverse( ).Select(x => x.Key), Encoding.UTF8);
+        File.WriteAllLines(
+            ipPath,
+            sortList.Reverse( ).Select(x => x.Key),
+            Encoding.UTF8);
     }
 
     private static bool CheckIP(string ip)
     {
-        if (IsIPv6)
-            return IPRegex.IPv6Regex( ).IsMatch(ip.Trim( ));
-        else
-            return IPRegex.IPv4Regex( ).IsMatch(ip.Trim( ));
+        if (IsIPv6) return IPRegex.IPv6Regex( ).IsMatch(ip.Trim( ));
+        else return IPRegex.IPv4Regex( ).IsMatch(ip.Trim( ));
     }
 
     private static void FlushDNS( )
     {
         StringBuilder output = new( );
         Dictionary<OSPlatform, Tuple<string, string>> dnsCmdLine = new( )
-            {
-                {OSPlatform.Windows, new ("ipconfig.exe","/flushdns") },
-                {OSPlatform.OSX, new ("killall", "-HUP mDNSResponder") },
-                {OSPlatform.Linux, new ("systemctl", "restart systemd-resolved") },
-            };
+        {
+            { OSPlatform.Windows, new ("ipconfig.exe","/flushdns") },
+            { OSPlatform.OSX, new ("killall", "-HUP mDNSResponder") },
+            { OSPlatform.Linux, new ("systemctl", "restart systemd-resolved") },
+        };
         string fileName = "", arguments = "";
         foreach (var item in dnsCmdLine)
         {
@@ -154,6 +153,6 @@ public static partial class Program
             process.Close( );
             Console.WriteLine(output.ToString( ));
         }
-        catch (Exception e) { Console.WriteLine(e); }
+        catch (Exception ex) { Console.WriteLine(ex); }
     }
 }

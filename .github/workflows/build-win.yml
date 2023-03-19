@@ -22,10 +22,10 @@ jobs:
         run: dotnet tool install --global dotnet-warp
 
       - name: Build Solution
-        run: dotnet-warp
+        run: dotnet-warp ./GoogleTranslateIpCheck/GoogleTranslateIpCheck.csproj
 
       - name: Upload Executable
         uses: actions/upload-artifact@v3
         with:
-          name: GoogleTranslateIpCheck
+          name: App
           path: ./GoogleTranslateIpCheck/bin/Release/net7.0/win-x64/native/GoogleTranslateIpCheck.exe

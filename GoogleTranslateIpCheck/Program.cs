@@ -36,7 +36,6 @@ public static partial class Program
         {
             MaxDegreeOfParallelism = MainConfig!.ScanSpeed
         }, async (ip, _) => await GetDelayAsync(ip, MainConfig, ipTimes));
-
         if (ipTimes.IsEmpty)
         {
             Console.WriteLine(Texts.NoIPFile);
@@ -99,5 +98,4 @@ public static partial class Program
         }
         IPFile = !IsIPv6 ? "ip.txt" : "ipv6.txt";
     }
-
 }

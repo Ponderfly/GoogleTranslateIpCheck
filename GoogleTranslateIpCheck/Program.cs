@@ -26,10 +26,14 @@ public static partial class Program
         Console.WriteLine(Texts.SupportIPv6);
         PraseArgs(args);
         HashSet<string>? ips = null;
-        if (ScanMode) ips = ScanIp(MainConfig);
-        ips ??= await GetIP(MainConfig);
-        if (ips is null || ips?.Count == 0)
+        if (ScanMode)
             ips = ScanIp(MainConfig);
+        else
+        {
+            ips ??= await GetIP(MainConfig);
+            if (ips is null || ips?.Count == 0)
+                ips = ScanIp(MainConfig);
+        }
         ConcurrentDictionary<string, long> ipTimes = new( );
         Console.WriteLine(Texts.StartScan);
         await Parallel.ForEachAsync(ips!, new ParallelOptions( )
@@ -45,9 +49,9 @@ public static partial class Program
         Console.WriteLine(Texts.ScanComplete);
         var sortList = ipTimes.OrderByDescending(x => x.Value);
         foreach (var x in sortList)
-            Console.WriteLine($"{x.Key} {x.Value} ms");
+            Console.WriteLine($"{x.Key}\t{x.Value} ms");
         string bestIp = sortList.Last( ).Key;
-        Console.WriteLine($"最快 IP 为 {bestIp} {sortList.Last( ).Value} ms");
+        Console.WriteLine($"最快 IP 为 {bestIp} ({sortList.Last( ).Value} ms)");
         SaveIP(IPFile, sortList);
         Console.WriteLine(Texts.SetHostTip);
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

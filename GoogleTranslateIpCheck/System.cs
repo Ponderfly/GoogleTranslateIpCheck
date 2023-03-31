@@ -38,9 +38,9 @@ public static partial class Program
                 listIp.Add(line.Trim( ));
             else
             {
-                foreach (string ip in line.Split(','))
+                foreach (var ip in line.Split(',').Where(ip => CheckIP(ip)))
                 {
-                    if (CheckIP(ip)) listIp.Add(ip.Trim( ));
+                    listIp.Add(ip.Trim( ));
                 }
             }
         }
@@ -52,7 +52,7 @@ public static partial class Program
     {
         try
         {
-            string address = !IsIPv6 ? config!.RemoteIp : config!.RemoteIPv6;
+            string address = !IsIPv6 ? config!.RemoteIP : config!.RemoteIPv6;
             string text = await address.WithTimeout(10).GetStringAsync( );
             return text.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         }

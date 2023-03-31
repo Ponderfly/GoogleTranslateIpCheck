@@ -12,7 +12,6 @@ namespace GoogleTranslateIpCheck;
 
 public static partial class Program
 {
-
     private static async ValueTask<bool> ConnectIp(string ip, Config? config)
     {
         string str = !IsIPv6 ? $"{ip}" : $"[{ip}]";
@@ -24,8 +23,7 @@ public static partial class Program
     }
 
     private static async Task GetDelayAsync(
-        string ip,
-        Config? config,
+        string ip, Config? config,
         ConcurrentDictionary<string, long> IPDelays)
     {
         Stopwatch watch = new( );
@@ -61,7 +59,7 @@ public static partial class Program
         CancellationTokenSource tokenSource = new( );
         tokenSource.Token.Register(( )
             => Console.WriteLine($"{Texts.IPScanCount} {config!.ScanLimit} 条"));
-        string[] IPRange = !IsIPv6 ? config!.IpRange : config!.IPV6Range;
+        string[] IPRange = !IsIPv6 ? config!.IpRange : config!.IPv6Range;
         foreach (string range in IPRange)
         {
             if (string.IsNullOrWhiteSpace(range)) continue;
@@ -81,8 +79,7 @@ public static partial class Program
                         try
                         {
                             string ip = addr.ToString( );
-                            if (!await ConnectIp(ip, config))
-                                return;
+                            if (!await ConnectIp(ip, config)) return;
                             Console.WriteLine($"{addr}");
                             ipTmp.Add(ip);
                             if (IPList.Count + ipTmp.Count >= config!.ScanLimit)

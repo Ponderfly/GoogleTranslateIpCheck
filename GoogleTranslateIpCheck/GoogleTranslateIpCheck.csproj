@@ -8,16 +8,6 @@
         <NeutralLanguage>zh-CN</NeutralLanguage>
     </PropertyGroup>
     <ItemGroup>
-        <None Include="..\README.md">
-            <Pack>True</Pack>
-            <PackagePath>\</PackagePath>
-        </None>
-        <None Include="..\LICENSE">
-            <Pack>True</Pack>
-            <PackagePath>\</PackagePath>
-        </None>
-    </ItemGroup>
-    <ItemGroup>
         <PackageReference Include="Flurl.Http" Version="4.0.0-pre2" />
         <PackageReference Include="IPNetwork2" Version="2.6.556" />
     </ItemGroup>

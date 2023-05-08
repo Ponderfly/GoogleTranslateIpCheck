@@ -1,4 +1,4 @@
-name: .NET Windows Build
+name: .NET Linux Build
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -28,4 +28,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: App
-          path: ./GoogleTranslateIpCheck/bin/Release/net7.0/win-x64/native/GoogleTranslateIpCheck.exe
+          path: ./GoogleTranslateIpCheck

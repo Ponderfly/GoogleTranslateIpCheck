@@ -27,7 +27,9 @@ public static partial class Program
         PraseArgs(args);
         HashSet<string>? ips = null;
         if (ScanMode)
+        {
             ips = ScanIp(MainConfig);
+        }
         else
         {
             ips ??= await GetIP(MainConfig);
@@ -36,10 +38,11 @@ public static partial class Program
         }
         ConcurrentDictionary<string, long> ipTimes = new( );
         Console.WriteLine(Texts.StartScan);
-        await Parallel.ForEachAsync(ips!, new ParallelOptions( )
-        {
-            MaxDegreeOfParallelism = MainConfig!.ScanSpeed
-        }, async (ip, _) => await GetDelayAsync(ip, MainConfig, ipTimes));
+        await Parallel.ForEachAsync(
+            ips!,
+            new ParallelOptions( ) { MaxDegreeOfParallelism = MainConfig!.ScanSpeed },
+            async (ip, _) => await GetDelayAsync(ip, MainConfig, ipTimes)
+        );
         if (ipTimes.IsEmpty)
         {
             Console.WriteLine(Texts.NoIPFile);
@@ -47,9 +50,11 @@ public static partial class Program
             return;
         }
         Console.WriteLine(Texts.ScanComplete);
-        var sortList = ipTimes.OrderByDescending(x => x.Value);
-        foreach (var x in sortList)
+        IOrderedEnumerable<KeyValuePair<string, long>> sortList = ipTimes.OrderByDescending(x => x.Value);
+        foreach (KeyValuePair<string, long> x in sortList)
+        {
             Console.WriteLine($"{x.Key}\t{x.Value} ms");
+        }
         string bestIp = sortList.Last( ).Key;
         Console.WriteLine($"最快 IP 为 {bestIp} ({sortList.Last( ).Value} ms)");
         SaveIP(IPFile, sortList);
@@ -87,7 +92,7 @@ public static partial class Program
         {
             try
             {
-                MainConfig = JsonSerializer.Deserialize(File.ReadAllText(ConfigPath), _JSONContext.Default.Config);
+                MainConfig = JsonSerializer.Deserialize(File.ReadAllText(ConfigPath), JSONContext.Default.Config);
             }
             catch (IOException)
             {

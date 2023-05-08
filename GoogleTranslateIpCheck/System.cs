@@ -35,10 +35,12 @@ public static partial class Program
         {
             if (string.IsNullOrWhiteSpace(line)) continue;
             if (!line.Contains(',') && CheckIP(line))
+            {
                 listIp.Add(line.Trim( ));
+            }
             else
             {
-                foreach (var ip in line.Split(',').Where(ip => CheckIP(ip)))
+                foreach (string? ip in line.Split(',').Where(CheckIP))
                 {
                     listIp.Add(ip.Trim( ));
                 }
@@ -65,17 +67,13 @@ public static partial class Program
 
     private static void SetHost(string ip)
     {
-        string hostFile;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            hostFile = "/etc/hosts";
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            hostFile = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.System),
-                @"drivers\etc\hosts");
-        }
-        else throw new NotSupportedException("暂不支持配置 Host 文件");
-
+        string hostFile = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+            ? "/etc/hosts"
+            : RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.System),
+                            @"drivers\etc\hosts")
+                : throw new NotSupportedException("暂不支持配置 Host 文件");
         File.SetAttributes(hostFile, FileAttributes.Normal);
         List<string> hosts = File.ReadAllLines(hostFile).ToList( );
         void Update(string host)
@@ -108,11 +106,7 @@ public static partial class Program
             Encoding.UTF8);
     }
 
-    private static bool CheckIP(string ip)
-    {
-        if (IsIPv6) return IPRegex.IPv6Regex( ).IsMatch(ip.Trim( ));
-        else return IPRegex.IPv4Regex( ).IsMatch(ip.Trim( ));
-    }
+    private static bool CheckIP(string ip) => IsIPv6 ? IPRegex.IPv6Regex( ).IsMatch(ip.Trim( )) : IPRegex.IPv4Regex( ).IsMatch(ip.Trim( ));
 
     private static void FlushDNS( )
     {
@@ -124,7 +118,7 @@ public static partial class Program
             { OSPlatform.Linux, new ("systemctl", "restart systemd-resolved") },
         };
         string fileName = "", arguments = "";
-        foreach (var item in dnsCmdLine)
+        foreach (KeyValuePair<OSPlatform, Tuple<string, string>> item in dnsCmdLine)
         {
             if (RuntimeInformation.IsOSPlatform(item.Key))
             {

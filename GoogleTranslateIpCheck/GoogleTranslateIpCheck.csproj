@@ -6,6 +6,7 @@
         <PublishAot>true</PublishAot>
         <AnalysisLevel>latest-recommended</AnalysisLevel>
         <NeutralLanguage>zh-CN</NeutralLanguage>
+        <LangVersion>11.0</LangVersion>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Flurl.Http" Version="4.0.0-pre2" />

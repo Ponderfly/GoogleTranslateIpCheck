@@ -4,13 +4,13 @@ public class Config
 {
     private const string RemoteAddr =
         "https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/GoogleTranslateIpCheck/";
+
     public string RemoteIP { get; set; } = RemoteAddr + "ip.txt";
     public string RemoteIPv6 { get; set; } = RemoteAddr + "ipv6.txt";
     public int ScanLimit { get; set; } = 5;
     public int ScanTimeout { get; set; } = 4;
     public int ScanSpeed { get; set; } = 80;
-    public string[] IpRange { get; set; } =
-    {
+    public string[] IPRange { get; } = {
         "142.250.0.0/15",
         "172.217.0.0/16",
         "172.253.0.0/16",

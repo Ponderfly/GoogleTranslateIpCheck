@@ -1,25 +1,25 @@
 {
-    "RemoteIP": "https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/ip.txt",
-    "RemoteIPv6": "https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/ipv6.txt",
-    "ScanLimit": 5,
-    "ScanTimeout": 4,
-    "ScanSpeed": 80,
-    "IPRange": [
-        "142.250.0.0/15",
-        "172.217.0.0/16",
-        "172.253.0.0/16",
-        "108.177.0.0/17",
-        "72.14.192.0/18",
-        "74.125.0.0/16",
-        "216.58.192.0/19"
-    ],
-    "IPv6Range": [
-        "2404:6800:4008:c15::0/112",
-        "2a00:1450:4001:802::0/112",
-        "2a00:1450:4001:803::0/112",
-        "2a00:1450:4001:809::0/112",
-        "2a00:1450:4001:811::0/112",
-        "2a00:1450:4001:827::0/112",
-        "2a00:1450:4001:828::0/112"
-    ]
+  "RemoteIP": "https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/ip.txt",
+  "RemoteIPv6": "https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/ipv6.txt",
+  "ScanLimit": 5,
+  "ScanSpeed": 80,
+  "ScanTimeout": 4,
+  "IPRange": [
+    "142.250.0.0/15",
+    "172.217.0.0/16",
+    "172.253.0.0/16",
+    "108.177.0.0/17",
+    "72.14.192.0/18",
+    "74.125.0.0/16",
+    "216.58.192.0/19"
+  ],
+  "IPv6Range": [
+    "2404:6800:4008:c15::0/112",
+    "2a00:1450:4001:802::0/112",
+    "2a00:1450:4001:803::0/112",
+    "2a00:1450:4001:809::0/112",
+    "2a00:1450:4001:811::0/112",
+    "2a00:1450:4001:827::0/112",
+    "2a00:1450:4001:828::0/112"
+  ]
 }

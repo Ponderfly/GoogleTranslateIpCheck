@@ -55,11 +55,11 @@ public static partial class Program
     private static HashSet<string>? ScanIp(Config? config)
     {
         Console.WriteLine( );
+        Console.WriteLine(Texts.StartScanTip);
         HashSet<string> IPList = new( );
         CancellationTokenSource tokenSource = new( );
-        tokenSource.Token.Register(( )
-            => Console.WriteLine($"{Texts.IPScanCount} {config!.ScanLimit} 条"));
-        string[] IPRange = !IsIPv6 ? config!.IpRange : config!.IPv6Range;
+        tokenSource.Token.Register(( ) => Console.WriteLine($"{Texts.IPScanCount} {config!.ScanLimit} 条"));
+        string[] IPRange = !IsIPv6 ? config!.IPRange : config!.IPv6Range;
         foreach (string range in IPRange)
         {
             if (string.IsNullOrWhiteSpace(range)) continue;

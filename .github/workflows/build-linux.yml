@@ -1,0 +1,31 @@
+name: .NET Linux Build
+
+on:
+  push:
+    branches: ["master"]
+
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v3
+
+      - name: Install Warp Tool
+        run: dotnet tool install --global dotnet-warp
+
+      - name: Build Project
+        run: dotnet-warp ./GoogleTranslateIpCheck/GoogleTranslateIpCheck.csproj
+
+      - name: Upload App
+        uses: actions/upload-artifact@v3
+        with:
+          name: App
+          path: ./GoogleTranslateIpCheck

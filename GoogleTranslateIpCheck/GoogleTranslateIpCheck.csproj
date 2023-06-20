@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net7.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <PublishAot>true</PublishAot>
+        <AnalysisLevel>latest-recommended</AnalysisLevel>
+        <NeutralLanguage>zh-CN</NeutralLanguage>
+        <LangVersion>11.0</LangVersion>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Flurl.Http" Version="4.0.0-pre2" />
+        <PackageReference Include="IPNetwork2" Version="2.6.556" />
+    </ItemGroup>
+    <ItemGroup>
+        <Compile Update="Properties\Texts.Designer.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>Texts.resx</DependentUpon>
+        </Compile>
+    </ItemGroup>
+    <ItemGroup>
+        <EmbeddedResource Update="Properties\Texts.resx">
+            <Generator>ResXFileCodeGenerator</Generator>
+            <LastGenOutput>Texts.Designer.cs</LastGenOutput>
+        </EmbeddedResource>
+    </ItemGroup>
+    <ItemGroup>
+        <None Update="config.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="ip.txt">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="ipv6.txt">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+</Project>

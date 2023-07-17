@@ -10,7 +10,7 @@ public class Config
     public int ScanLimit { get; set; } = 5;
     public int ScanTimeout { get; set; } = 4;
     public int ScanSpeed { get; set; } = 80;
-    public string[] IPRange { get; } = {
+    public string[] IPRange { get; set; } = {
         "142.250.0.0/15",
         "172.217.0.0/16",
         "172.253.0.0/16",

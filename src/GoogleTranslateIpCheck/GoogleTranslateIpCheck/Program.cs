@@ -1,12 +1,12 @@
-﻿using Flurl.Http;
+﻿extern alias IPNetwork2;
+using Flurl.Http;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using System.Runtime.InteropServices;
 
 const string configFile = "config.json";
 const string Host = "translate.googleapis.com";
@@ -29,7 +29,7 @@ if (File.Exists(configFile))
 
 var autoSet = false;
 var isIPv6 = false;
-string ipFile = "ip.txt";
+var ipFile = "ip.txt";
 HashSet<string>? ips = null;
 if (args.Length > 0)
 {
@@ -60,7 +60,7 @@ await Parallel.ForEachAsync(ips!, new ParallelOptions()
     }
 });
 
-if (times.Count == 0)
+if (times.IsEmpty)
 {
     Console.WriteLine("未找到可用IP,可删除 ip.txt 文件直接进入扫描模式");
     Console.ReadKey();
@@ -147,13 +147,13 @@ async Task<HashSet<string>?> ScanIpAsync()
     foreach (var ipRange in IP段)
     {
         if (string.IsNullOrWhiteSpace(ipRange)) continue;
-        IPNetwork ipnetwork = IPNetwork.Parse(ipRange);
         var _ips = new ConcurrentBag<string>();
         try
         {
+            var ipnetwork = IPNetwork2.System.Net.IPNetwork.Parse(ipRange);
             await
                 Parallel.ForEachAsync(
-                ipnetwork.ListIPAddress(FilterEnum.Usable),
+                ipnetwork.ListIPAddress(IPNetwork2.System.Net.FilterEnum.Usable),
                 new ParallelOptions()
                 {
                     MaxDegreeOfParallelism = config!.扫描并发数,
@@ -274,19 +274,7 @@ async Task SetHostFileAsync()
     var ip2 = $"{bestIp} {Host2}";
     File.SetAttributes(hostFile, FileAttributes.Normal);
     var lines = (await File.ReadAllLinesAsync(hostFile)).ToList();
-    void Update(string host)
-    {
-        for (var i = 0; i < lines!.Count; i++)
-        {
-            if (lines[i].Contains(host))
-                lines[i] = $"{bestIp} {host}";
-        }
-    }
-    void Add(string s)
-    {
-        lines.Add(Environment.NewLine);
-        lines.Add(s);
-    }
+
     if (lines.Any(s => s.Contains(Host)))
         Update(Host);
     else
@@ -296,6 +284,22 @@ async Task SetHostFileAsync()
     else
         Add(ip2);
     await File.WriteAllLinesAsync(hostFile, lines);
+    return;
+
+    void Update(string host)
+    {
+        for (var i = 0; i < lines!.Count; i++)
+        {
+            if (lines[i].Contains(host))
+                lines[i] = $"{bestIp} {host}";
+        }
+    }
+
+    void Add(string s)
+    {
+        lines.Add(Environment.NewLine);
+        lines.Add(s);
+    }
 }
 
 async Task SaveIpFileAsync()
@@ -372,8 +376,8 @@ public partial class RegexStuff
 
 public class Config
 {
-    public string 远程IP文件 { get; set; } = "https://ghproxy.com/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/ip.txt";
-    public string 远程IPv6文件 { get; set; } = "https://ghproxy.com/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/IPv6.txt";
+    public string 远程IP文件 { get; set; } = "https://mirror.ghproxy.com/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/ip.txt";
+    public string 远程IPv6文件 { get; set; } = "https://mirror.ghproxy.com/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/IPv6.txt";
     public int IP扫描限制数量 { get; set; } = 5;
     public int 扫描超时 { get; set; } = 4;
     public int 扫描并发数 { get; set; } = 80;

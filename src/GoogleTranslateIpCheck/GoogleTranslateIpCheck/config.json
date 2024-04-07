@@ -4,6 +4,11 @@
   "IP扫描限制数量": 5,
   "扫描超时": 4,
   "扫描并发数": 80,
+  "Hosts": [
+    "translate.googleapis.com",
+    "translate.google.com",
+    "translate-pa.googleapis.com"
+  ],
   "IP段": [
     "142.250.0.0/15",
     "172.217.0.0/16",

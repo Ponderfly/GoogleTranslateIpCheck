@@ -361,3 +361,4 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/src/GoogleTranslateIpCheck/.idea/.idea.GoogleTranslateIpCheck/.idea

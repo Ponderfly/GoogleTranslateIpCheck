@@ -10,10 +10,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Flurl.Http" Version="4.0.0-pre3" />
-		<PackageReference Include="IPNetwork2" Version="2.6.609" >
-			<Aliases>IPNetwork2</Aliases>
-		</PackageReference>
+		<PackageReference Include="Flurl.Http" Version="4.0.2" />
+		<PackageReference Include="IPNetwork2" Version="3.0.648" />
 	</ItemGroup>
 
 	<ItemGroup>

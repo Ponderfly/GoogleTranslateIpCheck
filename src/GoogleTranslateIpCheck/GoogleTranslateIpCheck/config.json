@@ -7,7 +7,8 @@
   "Hosts": [
     "translate.googleapis.com",
     "translate.google.com",
-    "translate-pa.googleapis.com"
+    "translate-pa.googleapis.com",
+    "jnn-pa.googleapis.com"
   ],
   "IP段": [
     "142.250.0.0/15",

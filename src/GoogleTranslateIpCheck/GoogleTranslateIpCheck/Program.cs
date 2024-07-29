@@ -2,11 +2,13 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using Flurl.Http.Content;
 
 const string configFile = "config.json";
 Console.WriteLine("如果支持IPv6推荐优先使用,使用参数 -6 启动");
@@ -47,17 +49,17 @@ if (ips is null || ips?.Count == 0)
     ips = await ScanIpAsync();
 ConcurrentDictionary<string, long> times = new();
 Console.WriteLine("\n开始检测IP响应时间\n");
-var total = ips == null ? 0 : ips.Count;
+var total = ips?.Count + 1 ?? 0;
+[MethodImpl(MethodImplOptions.Synchronized)]
+Task<int> ReduceTotal()
+{
+    total --;
+    return Task.FromResult(total);
+}
 await Parallel.ForEachAsync(ips!, new ParallelOptions()
 {
     MaxDegreeOfParallelism = config!.扫描并发数
-}, async (ip, _) =>
-{
-    {
-        await TestIpAsync(ip);
-    }
-});
-
+}, async (ip, _) => await TestIpAsync(ip));
 if (times.IsEmpty)
 {
     Console.WriteLine("未找到可用IP,可删除 ip.txt 文件直接进入扫描模式");
@@ -128,14 +130,13 @@ async Task TestIpAsync(string ip)
 
     if (flag)
     {
-        Console.WriteLine($"{ip}: 超时, 剩余 {total} 条IP待解析");
-        total --;
+        Console.WriteLine($"{ip}: 超时, 剩余 {await ReduceTotal()} 条IP待解析");
         return;
     }
 
     times.TryAdd(ip, time);
-    Console.WriteLine($"{ip}: 响应时间 {time} ms, 剩余 {total} 条IP待解析");
-    total --;
+    Console.WriteLine($"{ip}: 响应时间 {time} ms, 剩余 {await ReduceTotal()} 条IP待解析");
+    
 }
 
 async Task<HashSet<string>?> ScanIpAsync()

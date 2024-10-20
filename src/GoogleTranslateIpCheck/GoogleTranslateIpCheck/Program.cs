@@ -2,11 +2,13 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using Flurl.Http.Content;
 
 const string configFile = "config.json";
 Console.WriteLine("如果支持IPv6推荐优先使用,使用参数 -6 启动");
@@ -46,29 +48,25 @@ ips ??= await ReadIpAsync();
 if (ips is null || ips?.Count == 0)
     ips = await ScanIpAsync();
 ConcurrentDictionary<string, long> times = new();
-Console.WriteLine();
-Console.WriteLine("开始检测IP响应时间");
-Console.WriteLine();
+Console.WriteLine("\n开始检测IP响应时间\n");
+var total = ips?.Count + 1 ?? 0;
+[MethodImpl(MethodImplOptions.Synchronized)]
+Task<int> ReduceTotal()
+{
+    total --;
+    return Task.FromResult(total);
+}
 await Parallel.ForEachAsync(ips!, new ParallelOptions()
 {
     MaxDegreeOfParallelism = config!.扫描并发数
-}, async (ip, _) =>
-{
-    {
-        await TestIpAsync(ip);
-    }
-});
-
+}, async (ip, _) => await TestIpAsync(ip));
 if (times.IsEmpty)
 {
     Console.WriteLine("未找到可用IP,可删除 ip.txt 文件直接进入扫描模式");
     Console.ReadKey();
     return;
 }
-
-Console.WriteLine();
-Console.WriteLine("检测IP完毕,按照响应时间排序结果");
-Console.WriteLine();
+Console.WriteLine("\n检测IP完毕,按照响应时间排序结果\n");
 var sortList = times.OrderByDescending(x => x.Value);
 foreach (var x in sortList)
     Console.WriteLine($"{x.Key}: 响应时间 {x.Value} ms");
@@ -79,8 +77,7 @@ Console.WriteLine("设置Host文件需要管理员权限(Mac,Linux使用sudo运�
 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
     Console.WriteLine(@"Host文件路径为 C:\Windows\System32\drivers\etc\hosts (需去掉只读属性)");
 if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-    Console.WriteLine(@"Host文件路径为 /etc/hosts ");
-Console.WriteLine();
+    Console.WriteLine(@"Host文件路径为 /etc/hosts \n");
 foreach (var host in config!.Hosts)
     Console.WriteLine($"{bestIp} {host}");
 Console.WriteLine();
@@ -133,12 +130,13 @@ async Task TestIpAsync(string ip)
 
     if (flag)
     {
-        Console.WriteLine($"{ip}: 超时");
+        Console.WriteLine($"{ip}: 超时, 剩余 {await ReduceTotal()} 条IP待解析");
         return;
     }
 
     times.TryAdd(ip, time);
-    Console.WriteLine($"{ip}: 响应时间 {time} ms");
+    Console.WriteLine($"{ip}: 响应时间 {time} ms, 剩余 {await ReduceTotal()} 条IP待解析");
+    
 }
 
 async Task<HashSet<string>?> ScanIpAsync()
@@ -193,7 +191,7 @@ async Task<HashSet<string>?> ScanIpAsync()
         }
     }
 
-    Console.WriteLine($"扫描完成,找到 {listIp.Count} 条IP");
+    Console.WriteLine($"扫描完成, 共找到 {listIp.Count} 条IP");
     return listIp;
 }
 
@@ -212,8 +210,8 @@ async Task<HashSet<string>?> ReadIpAsync()
     string[]? lines;
     if (!File.Exists(ipFile))
     {
-        Console.WriteLine("未能找到IP文件");
-        Console.WriteLine("尝试从服务器获取IP");
+        Console.WriteLine($"未能找到 {ipFile} 文件");
+        Console.WriteLine("正在尝试从服务器获取IP");
         lines = await ReadRemoteIpAsync();
         if (lines is null)
             return null;
@@ -249,7 +247,7 @@ async Task<HashSet<string>?> ReadIpAsync()
         }
     }
 
-    Console.WriteLine($"找到 {listIp.Count} 条IP");
+    Console.WriteLine($"共找到 {listIp.Count} 条IP");
     return listIp;
 }
 

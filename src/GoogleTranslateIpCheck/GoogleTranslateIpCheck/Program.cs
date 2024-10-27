@@ -7,7 +7,19 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Runtime.CompilerServices;
+using System.Threading.Channels;
+using System.Runtime.Versioning;
+using System.ComponentModel;
+using System.Security.Principal;
 
+if (!OperatingSystem.IsWindows()) return;
+if (!IsRunningAsAdministrator())
+{
+    Console.WriteLine("请以管理员身份运行此程序。");
+    Console.ReadKey();
+    return;
+}
 const string configFile = "config.json";
 const string version = "1.9"; 
 Console.WriteLine("如果支持IPv6推荐优先使用,使用参数 -6 启动");
@@ -61,7 +73,7 @@ if (args.Length > 0)
     }
     if (args.Any(x => "-v".Equals(x, StringComparison.OrdinalIgnoreCase)))
     {
-        Console.WriteLine($"版本号: {version}");
+        Console.WriteLine($"版本号: {version} TurboSyn");
         return;
     }
     if (args.Any(x => "-y".Equals(x, StringComparison.OrdinalIgnoreCase)))
@@ -179,6 +191,8 @@ async Task TestIpAsync(string ip)
 
     times.TryAdd(ip, time);
     Console.WriteLine($"{ip}: 响应时间 {time} ms");
+    if (times.Count  >= config!.IP扫描限制数量)
+        ctsTest.Cancel();
 }
 
 async Task<HashSet<string>?> ScanIpAsync()
@@ -188,50 +202,27 @@ async Task<HashSet<string>?> ScanIpAsync()
     var IP段 = !isIPv6 ? config!.IP段 : config!.IPv6段;
     foreach (var ipRange in IP段)
     {
-        if (string.IsNullOrWhiteSpace(ipRange)) continue;
-        var _ips = new ConcurrentBag<string>();
         try
         {
-            var ipNetwork2 = IPNetwork2.Parse(ipRange);
-            await
-                Parallel.ForEachAsync(
-                    ipNetwork2.ListIPAddress(FilterEnum.Usable),
-                    new ParallelOptions()
-                    {
-                        MaxDegreeOfParallelism = config!.扫描并发数,
-                        CancellationToken = ctsScan.Token
-                    },
-                    async (ip, ct) =>
-                    {
-                        try
-                        {
-                            var result = await GetResultAsync(ip.ToString(),ctsScan);
-                            if (!result)
-                                return;
-                            Console.WriteLine($"{ip}");
-                            _ips.Add(ip.ToString());
-                            if (listIp.Count + _ips.Count >= config!.IP扫描限制数量)
-                                ctsScan.Cancel();
-                        }
-                        catch
-                        {
-                        }
-                    });
+            if (string.IsNullOrWhiteSpace(ipRange)) continue;
+            var results = TurboSyn.ScanAsync(ipRange, 443, progress =>
+            {
+                Console.Title = progress.ToString();
+            },ctsScan.Token).WithCancellation(ctsScan.Token);
+
+            await foreach (var address in results)
+            {
+                Console.WriteLine(address);
+                listIp.Add(address.ToString());
+            }
         }
         catch
         {
             // ignored
         }
-        finally
-        {
-            foreach (var ip in _ips)
-            {
-                listIp.Add(ip);
-            }
-        }
     }
-
-    Console.WriteLine($"扫描完成,找到 {listIp.Count} 条IP");
+    Console.WriteLine($"快速扫描完成,找到 {listIp.Count} 条IP");
+    Console.Title = $"快速扫描完成,找到 {listIp.Count} 条IP,开始检测IP响应时间";
     return listIp;
 }
 
@@ -401,6 +392,15 @@ bool CheckIp(string ip)
     return !isIPv6 ? RegexStuff.IpRegex().IsMatch(ip.Trim()) : RegexStuff.IPv6Regex().IsMatch(ip.Trim());
 }
 
+bool IsRunningAsAdministrator()
+{
+    using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
+    {
+        WindowsPrincipal principal = new WindowsPrincipal(identity);
+        return principal.IsInRole(WindowsBuiltInRole.Administrator);
+    }
+}
+
 public partial class RegexStuff
 {
     [GeneratedRegex(@"^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")]
@@ -450,3 +450,180 @@ public class Config
 internal partial class ConfigJsonContext : JsonSerializerContext
 {
 }
+
+public static partial class TurboSyn
+{
+    /// <summary>
+    /// 扫描进度
+    /// </summary>
+    /// <param name="CurrentCount">当前数量</param>
+    /// <param name="TotalCount">总数量</param>
+    /// <param name="IPAddress">当前扫描的IP地址</param>
+    public record struct ScanProgress(ulong CurrentCount, ulong TotalCount, IPAddress IPAddress);
+
+    private record UserParam(ChannelWriter<IPAddress> ChannelWriter, Action<ScanProgress>? ProgressChanged);
+
+    /// <summary>
+    /// 异步扫描
+    /// </summary>
+    /// <param name="content">CIDR或IP内容，一行一条记录</param>
+    /// <param name="port">扫描的TCP端口</param>
+    /// <param name="progressChanged">进度变化委托</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    /// <exception cref="Win32Exception"></exception>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    [SupportedOSPlatform("windows")]
+    public static async IAsyncEnumerable<IPAddress> ScanAsync(
+        string? content,
+        int port,
+        Action<ScanProgress>? progressChanged = default,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(port, 0);
+
+        var hContent = Marshal.StringToHGlobalAnsi(content);
+        var hScanner = TurboSynCreateScanner(hContent);
+        if (hScanner <= nint.Zero)
+        {
+            Marshal.FreeHGlobal(hContent);
+            throw new Win32Exception();
+        }
+
+        var channel = Channel.CreateUnbounded<IPAddress>();
+        var userParam = new UserParam(channel.Writer, progressChanged);
+        var userParamGCHandle = GCHandle.Alloc(userParam);
+
+        try
+        {
+            var results = ScanAsync(hScanner, port, channel.Reader, userParamGCHandle, cancellationToken);
+            await foreach (var address in results)
+            {
+                yield return address;
+            }
+        }
+        finally
+        {
+            userParamGCHandle.Free();
+            Marshal.FreeHGlobal(hContent);
+            TurboSynFreeScanner(hScanner);
+        }
+    }
+
+    private static async IAsyncEnumerable<IPAddress> ScanAsync(
+        nint hScanner,
+        int port,
+        ChannelReader<IPAddress> channelReader,
+        GCHandle userParamGCHandle,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        using (cancellationToken.Register(() => TurboSynCancelScan(hScanner)))
+        {
+            UnsafeTurboSynStartScan();
+            await foreach (var address in channelReader.ReadAllAsync(cancellationToken))
+            {
+                yield return address;
+            }
+        }
+
+        unsafe void UnsafeTurboSynStartScan()
+        {
+            var userParam = GCHandle.ToIntPtr(userParamGCHandle);
+            TurboSynStartScan(hScanner, port, &OnResult, &OnProgress, userParam);
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void OnResult(TurboSynScanResult result, nint param)
+    {
+        var userParamGCHandle = GCHandle.FromIntPtr(param);
+        if (userParamGCHandle.Target is UserParam userParam)
+        {
+            if (result.State == TurboSynScanState.Success)
+            {
+                var address = new IPAddress(result.IPAddressByteSpan);
+                userParam.ChannelWriter.TryWrite(address);
+            }
+            else if (result.State == TurboSynScanState.Cancelled)
+            {
+                userParam.ChannelWriter.Complete(new OperationCanceledException());
+            }
+            else
+            {
+                userParam.ChannelWriter.Complete();
+            }
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void OnProgress(TurboSynScanProgress progress, nint param)
+    {
+        var userParamGCHandle = GCHandle.FromIntPtr(param);
+        if (userParamGCHandle.Target is UserParam userParam && userParam.ProgressChanged != null)
+        {
+            var address = new IPAddress(progress.IPAddressByteSpan);
+            var scanProgress = new ScanProgress(progress.CurrentCount, progress.TotalCount, address);
+            userParam.ProgressChanged(scanProgress);
+        }
+    }
+}
+        
+partial class TurboSyn
+{
+    private enum TurboSynScanState
+    {
+        Success = 0,
+        Cancelled = 1,
+        Completed = 2,
+    }
+
+    private struct TurboSynScanResult
+    {
+        public TurboSynScanState State;
+        public int Port;
+        public int IPLength;
+        public Byte16 IPAddress;
+        public ReadOnlySpan<byte> IPAddressByteSpan => MemoryMarshal.CreateReadOnlySpan(ref IPAddress.Element0, IPLength);
+    }
+
+    private struct TurboSynScanProgress
+    {
+        public ulong CurrentCount;
+        public ulong TotalCount;
+        public int IPLength;
+        public Byte16 IPAddress;
+        public ReadOnlySpan<byte> IPAddressByteSpan => MemoryMarshal.CreateReadOnlySpan(ref IPAddress.Element0, IPLength);
+    }
+
+    [InlineArray(16)]
+    private struct Byte16
+    {
+        public byte Element0;
+    }
+
+
+    private const string TurboSynLib = "TurboSyn.dll";
+
+    [LibraryImport(TurboSynLib, SetLastError = true)]
+    private static partial nint TurboSynCreateScanner(
+        nint content);
+
+    [LibraryImport(TurboSynLib, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static unsafe partial bool TurboSynStartScan(
+        nint scanner,
+        int port,
+        delegate* unmanaged[Cdecl]<TurboSynScanResult, nint, void> resultCallback,
+        delegate* unmanaged[Cdecl]<TurboSynScanProgress, nint, void> progressCallback,
+        nint userParam);
+
+    [LibraryImport(TurboSynLib, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool TurboSynCancelScan(
+        nint scanner);
+
+    [LibraryImport(TurboSynLib, SetLastError = true)]
+    private static partial void TurboSynFreeScanner(
+        nint scanner);
+}
+

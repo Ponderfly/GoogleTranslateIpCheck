@@ -7,11 +7,21 @@
 		<Nullable>enable</Nullable>
 		<PublishAot>true</PublishAot>
 		<LangVersion>preview</LangVersion>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<ServerGarbageCollection>true</ServerGarbageCollection>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Flurl.Http" Version="4.0.2" />
 		<PackageReference Include="IPNetwork2" Version="3.0.648" />
+
+		<None Include="..\TurboSyn\*.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Include="..\TurboSyn\*.sys">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 
 	<ItemGroup>

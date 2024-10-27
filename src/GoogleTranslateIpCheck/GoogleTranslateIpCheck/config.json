@@ -3,7 +3,7 @@
   "远程IPv6文件": "https://mirror.ghproxy.com/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/IPv6.txt",
   "IP扫描限制数量": 5,
   "扫描超时": 4,
-  "扫描并发数": 80,
+  "扫描并发数": 500,
   "Hosts": [
     "translate.googleapis.com",
     "translate.google.com",
@@ -11,16 +11,21 @@
     "jnn-pa.googleapis.com"
   ],
   "IP段": [
+    "192.178.0.0/15",
     "142.250.0.0/15",
     "173.194.0.0/16",
     "172.217.0.0/16",
     "172.253.0.0/16",
+    "64.233.160.0/19",
+    "66.102.0.0/20",
     "108.177.0.0/17",
     "72.14.192.0/18",
     "74.125.0.0/16",
-    "216.58.192.0/19"
+    "216.58.192.0/19",
+    "216.239.32.0/19"
   ],
   "IPv6段": [
+    "2404:6800:4008:c13::0/112",
     "2404:6800:4008:c15::0/112",
     "2a00:1450:4001:802::0/112",
     "2a00:1450:4001:803::0/112"

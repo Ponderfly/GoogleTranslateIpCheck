@@ -1,9 +1,10 @@
 {
   "远程IP文件": "https://mirror.ghproxy.com/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/ip.txt",
   "远程IPv6文件": "https://mirror.ghproxy.com/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/IPv6.txt",
-  "IP扫描限制数量": 5,
-  "扫描超时": 4,
+  "IP扫描限制数量": 5, //扫描到多少个可用IP后停止
+  "扫描超时": 4, //秒
   "扫描并发数": 500,
+  "间隔扫描时间": 10, //分钟
   "Hosts": [
     "translate.googleapis.com",
     "translate.google.com",

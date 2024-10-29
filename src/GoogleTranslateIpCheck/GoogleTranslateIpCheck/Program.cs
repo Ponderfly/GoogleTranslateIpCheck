@@ -21,7 +21,8 @@ if (!IsRunningAsAdministrator())
     return;
 }
 const string configFile = "config.json";
-const string version = "1.9"; 
+const string version = "1.10";
+PrintHelp();
 Console.WriteLine("如果支持IPv6推荐优先使用,使用参数 -6 启动");
 var config = new Config();
 if (File.Exists(configFile))
@@ -42,28 +43,23 @@ if (File.Exists(configFile))
         Console.WriteLine("读取配置出错,将采用默认配置");
     }
 }
+else
+{
+    var options = new JsonSerializerOptions { WriteIndented = true };
+    var context = new ConfigJsonContext(options);
+    var json = JsonSerializer.Serialize(config, context.Config);
+    File.WriteAllText(configFile, json);
+}
 var ctsTest = new CancellationTokenSource();
 var ctsScan = new CancellationTokenSource();
 bool isScan = false, isFirstCancel = true;
-Console.CancelKeyPress += (sender, e) => 
-{
-    e.Cancel = true;
-    if (isFirstCancel && isScan)
-    {
-        ctsScan.Cancel();
-        isFirstCancel = false;
-        Console.WriteLine("扫描操作已取消!");
-    }
-    else
-    {
-        ctsTest.Cancel();
-        Console.WriteLine("检测操作已取消!");
-    }
-};
 var autoSet = false;
 var isIPv6 = false;
+var isIntervalMode = false;
+var readRemoteIp = true;
 var ipFile = "ip.txt";
 HashSet<string>? ips = null;
+
 if (args.Length > 0)
 {
     if (args.Any(x => "-6".Equals(x)))
@@ -81,14 +77,49 @@ if (args.Length > 0)
     if (args.Any(x => "-s".Equals(x, StringComparison.OrdinalIgnoreCase)))
     {
         isScan = true;
-        ips = await ScanIpAsync();
+    }
+    if (args.Any(x => "-t".Equals(x, StringComparison.OrdinalIgnoreCase)))
+    {
+        isIntervalMode = true;
+        autoSet = true;
+        isScan = true;
+        Console.WriteLine("自动扫描模式启动");
+    }
+    if (args.Any(x => "-h".Equals(x, StringComparison.OrdinalIgnoreCase)) || args.Any(x => "-?".Equals(x)))
+    {
+        PrintHelp();
+        return;
     }
 }
 
+Console.CancelKeyPress += (_, e) =>
+{
+    e.Cancel = true;
+    if (isIntervalMode)
+    {
+        Environment.Exit(0);
+    }
+    else if (isFirstCancel && isScan)
+    {
+        ctsScan.Cancel();
+        isFirstCancel = false;
+        Console.WriteLine("扫描操作已取消!");
+    }
+    else
+    {
+        ctsTest.Cancel();
+        Console.WriteLine("检测操作已取消!");
+    }
+};
+
+if (isScan)
+    ips = await ScanIpAsync();
+Start:
 ips ??= await ReadIpAsync();
 if (ips is null || ips?.Count == 0)
-    if(!isScan)
+    if(isScan)
         ips = await ScanIpAsync();
+
 ConcurrentDictionary<string, long> times = new();
 Console.WriteLine();
 Console.WriteLine("开始检测IP响应时间");
@@ -111,9 +142,10 @@ catch
 
 if (times.IsEmpty)
 {
-    Console.WriteLine("未找到可用IP,可删除 ip.txt 文件直接进入扫描模式");
-    Console.ReadKey();
-    return;
+    Console.WriteLine("未找到可用IP,进入扫描模式");
+    ips = null;
+    await File.WriteAllLinesAsync(ipFile, [], Encoding.UTF8);
+    goto Start;
 }
 
 Console.WriteLine();
@@ -157,13 +189,20 @@ Console.WriteLine("设置成功");
 await FlushDns();
 if (!autoSet)
     Console.ReadKey();
+else if(isIntervalMode)
+{
+    Console.WriteLine("扫描等待中...");
+    await Task.Delay(TimeSpan.FromSeconds(config.间隔扫描时间));
+    goto Start;
+}
+return;
 
 async Task TestIpAsync(string ip)
 {
     Stopwatch sw = new();
-    var time = 3000L;
+    var time = (long)TimeSpan.FromSeconds(config.扫描超时).TotalMilliseconds;
     var flag = false;
-    for (int i = 0; i < 5; i++)
+    for (var i = 0; i < 5; i++)
     {
         try
         {
@@ -185,13 +224,13 @@ async Task TestIpAsync(string ip)
 
     if (flag)
     {
-        //Console.WriteLine($"{ip}: 超时");
+        Console.Title = $"{ip}: 超时";
         return;
     }
 
     times.TryAdd(ip, time);
     Console.WriteLine($"{ip}: 响应时间 {time} ms");
-    if (times.Count  >= config!.IP扫描限制数量)
+    if (times.Count >= config!.IP扫描限制数量)
         ctsTest.Cancel();
 }
 
@@ -208,7 +247,7 @@ async Task<HashSet<string>?> ScanIpAsync()
             var results = TurboSyn.ScanAsync(ipRange, 443, progress =>
             {
                 Console.Title = progress.ToString();
-            },ctsScan.Token).WithCancellation(ctsScan.Token);
+            }, ctsScan.Token).WithCancellation(ctsScan.Token);
 
             await foreach (var address in results)
             {
@@ -250,11 +289,14 @@ async Task<HashSet<string>?> ReadIpAsync()
     else
     {
         lines = File.ReadAllLines(ipFile);
-        if (lines.Length < 1)
+        if (lines.Length < 1 && readRemoteIp)
         {
             lines = await ReadRemoteIpAsync();
             if (lines is null)
+            {
+                readRemoteIp = false;
                 return null;
+            }
         }
     }
 
@@ -288,7 +330,7 @@ async Task<string[]?> ReadRemoteIpAsync()
     {
         var address = !isIPv6 ? config!.远程IP文件 : config!.远程IPv6文件;
         var text = await address.WithTimeout(10).GetStringAsync();
-        return text.Split(new[] { '\n' },
+        return text.Split(['\n'],
             StringSplitOptions.RemoveEmptyEntries);
     }
     catch
@@ -301,12 +343,11 @@ async Task<string[]?> ReadRemoteIpAsync()
 async Task SetHostFileAsync()
 {
     string hostFile;
-    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+    if (OperatingSystem.IsWindows())
         hostFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.System),
             @"drivers\etc\hosts");
-    else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
-             || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+    else if (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
         hostFile = "/etc/hosts";
     else
         throw new Exception("暂不支持配置HOST文件");
@@ -328,7 +369,6 @@ async Task SetHostFileAsync()
     }
 
     await File.WriteAllLinesAsync(hostFile, lines);
-    return;
 }
 
 async Task SaveIpFileAsync()
@@ -342,17 +382,17 @@ async Task FlushDns()
     var sb = new StringBuilder();
     string fileName;
     string arguments;
-    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+    if (OperatingSystem.IsWindows())
     {
         fileName = "ipconfig.exe";
         arguments = "/flushdns";
     }
-    else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+    else if (OperatingSystem.IsMacOS())
     {
         fileName = "killall";
         arguments = "-HUP mDNSResponder";
     }
-    else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+    else if (OperatingSystem.IsLinux())
     {
         fileName = "systemctl";
         arguments = "restart systemd-resolved";
@@ -401,6 +441,17 @@ bool IsRunningAsAdministrator()
     }
 }
 
+void PrintHelp()
+{
+    Console.WriteLine("用法:");
+    Console.WriteLine("  -6       使用IPv6地址");
+    Console.WriteLine("  -v       显示版本信息");
+    Console.WriteLine("  -y       自动设置Host文件");
+    Console.WriteLine("  -s       扫描IP");
+    Console.WriteLine("  -t       自动扫描模式");
+    Console.WriteLine("  -h, -?   显示帮助信息");
+}
+
 public partial class RegexStuff
 {
     [GeneratedRegex(@"^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")]
@@ -414,9 +465,11 @@ public class Config
 {
     public string 远程IP文件 { get; set; } = "https://mirror.ghproxy.com/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/ip.txt";
     public string 远程IPv6文件 { get; set; } = "https://mirror.ghproxy.com/https://raw.githubusercontent.com/Ponderfly/GoogleTranslateIpCheck/master/src/GoogleTranslateIpCheck/GoogleTranslateIpCheck/IPv6.txt";
-    public int IP扫描限制数量 { get; set; } = 5;
-    public int 扫描超时 { get; set; } = 4;
-    public int 扫描并发数 { get; set; } = 80;
+    public int IP扫描限制数量 { get; set; } = 5; // 扫描到多少个可用IP后停止
+    public int 扫描超时 { get; set; } = 4; // 秒
+    public int 扫描并发数 { get; set; } = 500;
+    public int 间隔扫描时间 { get; set; } = 10; // 分钟
+
     public string[] Hosts { get; set; } =
         """
             translate.googleapis.com

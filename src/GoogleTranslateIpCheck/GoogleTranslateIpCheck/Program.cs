@@ -192,7 +192,7 @@ if (!autoSet)
 else if(isIntervalMode)
 {
     Console.WriteLine("扫描等待中...");
-    await Task.Delay(TimeSpan.FromSeconds(config.间隔扫描时间));
+    await Task.Delay(TimeSpan.FromMinutes(config.间隔扫描时间));
     goto Start;
 }
 return;

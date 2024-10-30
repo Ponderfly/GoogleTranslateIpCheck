@@ -14,8 +14,8 @@ sudo ./GoogleTranslateIpCheck
 ##### Window
 ##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.8/win-x64.zip
 ##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.8/win-x86.zip
-##### 推荐使用 底层基于 WinDivert 的 TurboSyn ( https://github.com/spartacus-soft/TurboSyn ) 进行快速扫描,需管理员运行,只支持Windows系统
-##### 🌟 https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.9/win-x64.TurboSyn.zip
+##### 推荐使用 底层基于 WinDivert 的 [TurboSyn](https://github.com/spartacus-soft/TurboSyn) 进行快速扫描,需管理员运行,只支持Windows系统,使用 -t 可进入自动扫描模式
+##### 🌟 https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.10/win-x64.TurboSyn.zip
  
 ##### Mac OS
 ##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.8/osx-arm64.zip

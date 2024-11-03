@@ -52,13 +52,14 @@ else
 }
 var ctsTest = new CancellationTokenSource();
 var ctsScan = new CancellationTokenSource();
-bool isScan = false, isFirstCancel = true;
+bool isScan = false, scanRunning = false, testRunning = false;
 var autoSet = false;
 var isIPv6 = false;
 var isIntervalMode = false;
 var readRemoteIp = true;
 var ipFile = "ip.txt";
 HashSet<string>? ips = null;
+ConcurrentDictionary<string, long> times = new();
 
 if (args.Length > 0)
 {
@@ -88,7 +89,7 @@ if (args.Length > 0)
     if (args.Any(x => "-h".Equals(x, StringComparison.OrdinalIgnoreCase)) || args.Any(x => "-?".Equals(x)))
     {
         PrintHelp();
-        return;
+        Environment.Exit(0);
     }
 }
 
@@ -99,31 +100,42 @@ Console.CancelKeyPress += (_, e) =>
     {
         Environment.Exit(0);
     }
-    else if (isFirstCancel && isScan)
+    else if (scanRunning)
     {
         ctsScan.Cancel();
-        isFirstCancel = false;
         Console.WriteLine("扫描操作已取消!");
     }
-    else
+    else if(testRunning)
     {
         ctsTest.Cancel();
         Console.WriteLine("检测操作已取消!");
+    }
+    else
+    {
+        Environment.Exit(0);
     }
 };
 
 if (isScan)
     ips = await ScanIpAsync();
 Start:
+if(ctsScan.IsCancellationRequested || ctsTest.IsCancellationRequested)
+{
+    if (times.IsEmpty)
+        Environment.Exit(0);
+    else
+        goto end;
+
+}
+    
 ips ??= await ReadIpAsync();
 if (ips is null || ips?.Count == 0)
-    if(isScan)
         ips = await ScanIpAsync();
 
-ConcurrentDictionary<string, long> times = new();
 Console.WriteLine();
 Console.WriteLine("开始检测IP响应时间");
 Console.WriteLine();
+testRunning = true;
 try
 {
     await Parallel.ForEachAsync(ips!, new ParallelOptions()
@@ -132,6 +144,7 @@ try
         CancellationToken =  ctsTest.Token
     }, async (ip, ct) =>
     {
+
         await TestIpAsync(ip);
     });
 }
@@ -139,7 +152,7 @@ catch
 {
     // ignored
 }
-
+testRunning = false;
 if (times.IsEmpty)
 {
     Console.WriteLine("未找到可用IP,进入扫描模式");
@@ -147,7 +160,7 @@ if (times.IsEmpty)
     await File.WriteAllLinesAsync(ipFile, [], Encoding.UTF8);
     goto Start;
 }
-
+end:
 Console.WriteLine();
 Console.WriteLine("检测IP完毕,按照响应时间排序结果");
 Console.WriteLine();
@@ -202,7 +215,7 @@ async Task TestIpAsync(string ip)
     Stopwatch sw = new();
     var time = (long)TimeSpan.FromSeconds(config.扫描超时).TotalMilliseconds;
     var flag = false;
-    for (var i = 0; i < 5; i++)
+    for (var i = 0; i < 3; i++)
     {
         try
         {
@@ -236,6 +249,7 @@ async Task TestIpAsync(string ip)
 
 async Task<HashSet<string>?> ScanIpAsync()
 {
+    scanRunning = true;
     Console.WriteLine("开始扫描可用IP,时间较长,请耐心等候");
     var listIp = new HashSet<string>();
     var IP段 = !isIPv6 ? config!.IP段 : config!.IPv6段;
@@ -262,6 +276,7 @@ async Task<HashSet<string>?> ScanIpAsync()
     }
     Console.WriteLine($"快速扫描完成,找到 {listIp.Count} 条IP");
     Console.Title = $"快速扫描完成,找到 {listIp.Count} 条IP,开始检测IP响应时间";
+    scanRunning = false;
     return listIp;
 }
 
@@ -294,9 +309,9 @@ async Task<HashSet<string>?> ReadIpAsync()
             lines = await ReadRemoteIpAsync();
             if (lines is null)
             {
-                readRemoteIp = false;
                 return null;
             }
+            readRemoteIp = false;
         }
     }
 

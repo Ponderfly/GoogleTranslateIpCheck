@@ -8,7 +8,8 @@
     "translate.googleapis.com",
     "translate.google.com",
     "translate-pa.googleapis.com",
-    "jnn-pa.googleapis.com"
+    "jnn-pa.googleapis.com",
+    "translation.googleapis.com"
   ],
   "IP段": [
     "192.178.0.0/15",

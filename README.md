@@ -24,6 +24,7 @@ sudo ./GoogleTranslateIpCheck
 ##### Linux
 ##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.8/linux-x64.zip
 ##### https://github.com/Ponderfly/GoogleTranslateIpCheck/releases/download/1.8/linux-arm64.zip
+##### 静态链接版，适合glibc过低的老系统 https://github.com/user-attachments/files/23772336/linux-musl-x64.zip
 
 #### 常见问题
 ##### 1.如果所有IP都超时,请检查是否开了代理 
